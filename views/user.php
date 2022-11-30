@@ -1,4 +1,1 @@
-
-<h1>User </h1>
-
-<?php echo $params['id']; ?>
+<h1>USER</h1>

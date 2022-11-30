@@ -1,120 +1,93 @@
 <?php
 
-/*
-class HTTPrequest{
 
-  public function get($route){
-    if ($_SERVER['REQUEST_METHOD'] === 'GET'){
-      foreach($_GET as $key => $vl) {
-        echo($key .  $vl . "\n");
-      };
-    };
-  }
+    class Request{
+        public function getPath(){
+            $path = $_SERVER['REQUEST_URI'] ?? '/'; 
+            $paramPosition = strpos($path, '?');
 
-  public function post($route){
-    if ($_SERVER['REQUEST_METHOD'] === 'POST'){
-      foreach($_POST as $key => $vl) {
-        echo($key .  $vl . "\n");
-      };
-    };
-  }
-}
+            if($paramPosition === false){
+                return $path;
+            }
 
-class Router{
+            return $path = substr($path, 0, $paramPosition); //RETURNS ROUTE BEFORE ? PARAM
+        }
 
-  private $viewsSource;
+        public function getHTTPMethod(){
+            return strtolower($_SERVER['REQUEST_METHOD']); //HTTP METHOD TO lower case
+        }
+    }
 
-  function __construct($path)
-  {
-    $this->viewsSource = $path;
-  }
+    class Response{
+        public function setStatusCode(int $code){
+            http_response_code($code);
+        }
+    }
 
-  public function get($route, $file){
-      $uri = $_SERVER['REQUEST_URI'];
-      $uri = trim($uri, '/');
-      $uri = explode('/', $uri);
+    class Router{
 
-      if($uri[0] == trim($route, '/')){
-        array_shift($uri);
-        $args = $uri;
-      }
-      
-      print_r($uri);
-  }
+        private Request $request;
+        private Response $response;
+        protected array $routes = [];
+        private $viewsFolder;
 
+        public static string $rootDir;
 
-}
+        function __construct($viewsFolder)
+        {   
+            $this->viewsFolder = $viewsFolder;
+            $this->request = new Request();
+            $this->response = new Response();
+        }
 
+        public function get($path, $callback){
+            $this->routes['get'][$path] = $callback; //SAVE CALLBACK TO BY METHOD AND ROUTE
+        }
 
- // $url = $_SERVER['REQUEST_URI'];
+        public function resolve(){
+            $path = $this->request->getPath();  //GET ROUTE PATH
+            $method = $this->request->getHTTPMethod(); //GET HTTP METHOD
+            $callback = $this->routes[$method][$path] ?? false; //CHECK IF CALLBACK FUNCTION IS PRESENT
 
-  //$expl = explode('/', $url);
+            if($callback === false){
+                $this->response->setStatusCode(400);
+                return "Not found";
+            }
 
-  /*
+            if(is_string($callback)){
+                return $this->renderView($callback);
+            }
 
-  if ($_SERVER['REQUEST_METHOD'] === 'POST'){
-    foreach($_POST as $key => $vl) {
-      echo($key);
-      echo($vl);
-    };
-  }*/
+            //EXECUTE CALLBACK
+            return call_user_func($callback);
+        }
 
-include_once('./core/Router.php');
+        function renderView($view){
+            
+            $layoutContent = $this->layoutContent();
+            $viewContet = $this->renderOnlyView($view);
+            return str_replace('{{content}}', $viewContet, $layoutContent);
+        }
 
-Router::get('/{as}', function () {
-  include('./views/home.php');
-  exit();
-});
+        function layoutContent(){
 
-Router::get('/user/([0-9]*)', function( Request $request, Response $response) {
-    $response->toJSON([
-      'user' => ['id' => $request->paramtrs[0]],
-      'status' => 'ok'
-    ]);
+            ob_start(); //STARTS OUTPUT CACHING
+            include_once("./views/layouts/mainLayout.php");
+            return ob_get_clean();
+        }
 
-});
+        protected function renderOnlyView($view){
+            ob_start(); //STARTS OUTPUT CACHING
+            include_once($this->viewsFolder . $view . ".php");
+            return ob_get_clean();
+        }
+    }
 
-Router::get('/user/admin/([aA0-zZ9]*)', function( Request $request, Response $response) {
-  $response->toJSON([
-    'user' => ['id' => $request->paramtrs[0]],
-  ]);
-});
-/*
-  $htpprequest = new HTTPrequest();
-  $htpprequest->get("/home");
-  $htpprequest->post("/");
+    $router = new Router('./views/');
 
-    include_once './core/Request.php';
-    include_once './core/Router.php';
-    include_once './core/Route.php';
+    $router->get('/', 'home');
+    $router->get('/user', 'user');
 
+    echo($router->resolve());
 
-    //NEW ROUTE
-    $route = new Route("./views/");
-
-    $route->get("/", "home.php");
-    $route->get("/user/{id}", "user.php");
-    $route->notFound("404.php")
-
-    /*
-    $router = new Router(new Request);
-
-    $router->get('/', function() {
-      return <<<HTML
-      <h1>Hello world</h1>
-    HTML;
-    });
-    
-    
-    $router->get('/profile', function($request) {
-      return <<<HTML
-      <h1>Profile</h1>
-    HTML;
-    });
-    
-    $router->post('/data', function($request) {
-    
-      return json_encode($request->getBody());
-    });
-    */
 ?>
