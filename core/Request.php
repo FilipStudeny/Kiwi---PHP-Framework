@@ -1,55 +1,46 @@
 <?php
-    include_once './core/IRequest.php';
-
-    class Request implements IRequest
+    class Request
     {
-      function __construct()
-      {
-        $this->bootstrapSelf();
-      }
+        public $paramtrs;
+        public $req_method;
+        public $content_type;
     
-      private function bootstrapSelf()
-      {
-        foreach($_SERVER as $key => $value)
+        public function __construct($paramtrs = [])
         {
-          $this->{$this->toCamelCase($key)} = $value;
-        }
-      }
-    
-      private function toCamelCase($string)
-      {
-        $result = strtolower($string);
-            
-        preg_match_all('/_[a-z]/', $result, $matches);
-    
-        foreach($matches[0] as $match)
-        {
-            $c = str_replace('_', '', strtoupper($match));
-            $result = str_replace($match, $c, $result);
+            $this->paramtrs = $paramtrs;
+            $this->req_method = trim($_SERVER['REQUEST_METHOD']);
+            $this->content_type = !empty($_SERVER["CONTENT_TYPE"]) ? trim($_SERVER["CONTENT_TYPE"]) : '';
         }
     
-        return $result;
-      }
-    
-      public function getBody()
-      {
-        if($this->requestMethod === "GET")
+        public function getBody()
         {
-          return;
+            if ($this->req_method !== 'POST') {
+                return '';
+            }
+    
+            $post_body = [];
+            foreach ($_POST as $key => $value) {
+                $post_body[$key] = filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS);
+            }
+    
+            return $post_body;
         }
     
-    
-        if ($this->requestMethod == "POST")
+        public function getJSON()
         {
+            if ($this->req_method !== 'POST') {
+                return [];
+            }
     
-          $body = array();
-          foreach($_POST as $key => $value)
-          {
-            $body[$key] = filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS);
-          }
+            if (strcasecmp($this->content_type, 'application/json') !== 0) {
+                return [];
+            }
     
-          return $body;
+            // Receive the RAW post data.
+            $post_content = trim(file_get_contents("php://input"));
+            $p_decoded = json_decode($post_content);
+    
+            return $p_decoded;
         }
-      }
     }
 ?>

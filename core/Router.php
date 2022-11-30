@@ -1,73 +1,44 @@
 <?php
-    class Router{
-        private $request;
-        private $supportedHttpMethods = array(
-            "GET",
-            "POST"
-        );
 
-        function __construct(IRequest $request)
+    include_once './core/Request.php';
+    include_once './core/Response.php';
+    
+    class Router
+    {
+        public static function get($app_route, $app_callback)
         {
-            $this->request = $request;
-        }
-
-        function __call($name, $args)
-        {
-            list($route, $method) = $args;
-
-            if(!in_array(strtoupper($name), $this->supportedHttpMethods))
-            {
-            $this->invalidMethodHandler();
+            if (strcasecmp($_SERVER['REQUEST_METHOD'], 'GET') !== 0) {
+                return;
             }
 
-            $this->{strtolower($name)}[$this->formatRoute($route)] = $method;
+            self::on($app_route, $app_callback);
         }
 
-        /**
-         * Removes trailing forward slashes from the right of the route.
-         * @param route (string)
-         */
-        private function formatRoute($route)
+        public static function post($app_route, $app_callback)
         {
-            $result = rtrim($route, '/');
-            if ($result === '')
-            {
-            return '/';
-            }
-            return $result;
-        }
-
-        private function invalidMethodHandler()
-        {
-            header("{$this->request->serverProtocol} 405 Method Not Allowed");
-        }
-
-        private function defaultRequestHandler()
-        {
-            header("{$this->request->serverProtocol} 404 Not Found");
-        }
-
-        /**
-         * Resolves a route
-         */
-        function resolve()
-        {
-            $methodDictionary = $this->{strtolower($this->request->requestMethod)};
-            $formatedRoute = $this->formatRoute($this->request->requestUri);
-            $method = $methodDictionary[$formatedRoute];
-
-            if(is_null($method))
-            {
-            $this->defaultRequestHandler();
-            return;
+            if (strcasecmp($_SERVER['REQUEST_METHOD'], 'POST') !== 0) {
+                return;
             }
 
-            echo call_user_func_array($method, array($this->request));
+            self::on($app_route, $app_callback);
         }
 
-        function __destruct()
+        public static function on($exprr, $call_back)
         {
-            $this->resolve();
+            $paramtrs = $_SERVER['REQUEST_URI'];
+            $paramtrs = (stripos($paramtrs, "/") !== 0) ? "/" . $paramtrs : $paramtrs;
+            $exprr = str_replace('/', '\/', $exprr);
+            $matched = preg_match('/^' . ($exprr) . '$/', $paramtrs, $is_matched, PREG_OFFSET_CAPTURE);
+
+            if ($matched) {
+                // first value is normally the route, lets remove it
+                array_shift($is_matched);
+                // Get the matches as parameters
+                $paramtrs = array_map(function ($paramtr) {
+                    return $paramtr[0];
+                }, $is_matched);
+                $call_back(new Request($paramtrs), new Response());
+            }
         }
     }
 ?>
