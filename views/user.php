@@ -1,1 +1,2 @@
-<h1>USER</h1>
+
+<h1>USER: <?= $params['id'] ?></h1>
