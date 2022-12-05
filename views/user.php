@@ -1,2 +1,6 @@
 
-<h1>USER: <?= $params['id'] ?></h1>
+<?php
+
+    echo $_GET['id'];
+
+?>

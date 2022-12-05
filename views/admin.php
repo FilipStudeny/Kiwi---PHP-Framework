@@ -1,3 +1,10 @@
+<h1>ADMIN</h1>
 
-<h1>USER: <?= $params['id'] ?></h1>
-<h1>NAME: <?= $params['name'] ?></h1>
+<?php
+
+echo $_GET['id'];
+
+var_dump($_REQUEST);
+
+echo $_SERVER['PHP_SELF'];
+?>
