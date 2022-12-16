@@ -19,6 +19,10 @@
     Router::post("/user/new/:username", function($val) {
         echo "User " . $val . " created <br>";
     });
+
+    Router::get("/post/:id/comment/:id", function($val, $val2) {
+        echo "Post " . $val . " === " . "Comment " . $val2;
+    });
     Router::resolve();
 
 ?>

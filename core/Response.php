@@ -6,7 +6,8 @@
          * RENDER USER SPECIFIED PAGE WITH PARAMETERS
          */
         public static function render($file, $params="" ,$viewsFolder='./views/'){
-            include($viewsFolder . $file);
+            include_once($viewsFolder . $file);
+            exit();
         }
 
         /**
@@ -25,7 +26,7 @@
         public static function notFound(){
             header("HTTP/1.0 404 Page not found");
             http_response_code(400);
-            include('./views/404.php');
+            include_once('./views/404.php');
             
             exit();
         }

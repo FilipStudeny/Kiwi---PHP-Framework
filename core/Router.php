@@ -1,6 +1,7 @@
 <?php
 
     include_once './core/Response.php';
+    include_once './core/Request.php';
 
     class Router{
 
@@ -22,9 +23,25 @@
             ];
         }
 
+        public static function put($route, $callback){
+            self::$routes[] = [
+                'route' => $route,
+                'callback' => $callback,
+                'method' => 'PUT'
+            ];
+        }
+
+        public static function delete($route, $callback){
+            self::$routes[] = [
+                'route' => $route,
+                'callback' => $callback,
+                'method' => 'DELETE'
+            ];
+        }
+
         public static function resolve(){
-            $path = $_SERVER['REQUEST_URI'];
-            $httpMethod = $_SERVER['REQUEST_METHOD'];
+            $path = Request::getURIpath(); //$_SERVER['REQUEST_URI'];
+            $httpMethod = Request::getHTTPmethod(); //$_SERVER['REQUEST_METHOD'];
 
             $methodMatch = false;
             $routeMatch = false;
@@ -54,6 +71,11 @@
                     array_shift($matches); //REMOVES FIRST ELEMENT
 
                     if(is_callable($route['callback'])){
+                        echo Request::getURIpath() . "<br>";
+
+                        echo Request::getParams($route)[0] . "<br>";
+                        echo Request::getParam($route, 1) . "<br>";
+
                         call_user_func_array($route['callback'], $matches);
                     }else{
                         Response::render($route['callback'], $matches);
