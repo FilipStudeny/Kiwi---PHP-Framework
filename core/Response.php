@@ -10,6 +10,10 @@
             exit();
         }
 
+        public function echoMessage($message){
+            echo $message;
+        }
+
         /**
          * RENDER RESPONSE WHEN WRONG HTTP METHOD IS USED ON ROUTE
          */

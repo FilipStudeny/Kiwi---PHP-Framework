@@ -2,6 +2,29 @@
 
 class Request{
 
+
+    private $parameters; //ROUTE PARAMETERS
+
+
+    function __construct($parameters)
+    {
+        $this->parameters = $parameters;
+    }
+
+    /**
+     * GET ALL PARAMETERS FROM ROUTE AS AN ARRAY
+     */
+    public function getParams(){
+        return $this->parameters;
+    }
+
+    /**
+     * GET SINGLE PARAMETER FROM ROUTE
+     */
+    public function getParameter($index){
+        return $this->parameters[$index];
+    }
+
     /**
      * GET URI PATH
      */
@@ -16,9 +39,10 @@ class Request{
         return $_SERVER['REQUEST_METHOD'];
     }
 
+    
     /**
      * GET ALL PARAMETERS FROM ROUTE AS AN ARRAY
-     */
+     *//*
     public static function getParams($route){
         $pattern = "@^" . preg_replace('/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote($route['route'])) . "$@D";
         $matches = Array();
@@ -30,13 +54,16 @@ class Request{
 
         return $matches;
     }
+*/
+
 
     /**
      * GET SINGLE PARAMETER FROM ROUTE
      */
+    /*
     public static function getParam($route, $index){
         return self::getParams($route)[$index];
-    }
+    }*/
 
 
 }

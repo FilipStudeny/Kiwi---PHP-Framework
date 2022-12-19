@@ -71,12 +71,37 @@
                     array_shift($matches); //REMOVES FIRST ELEMENT
 
                     if(is_callable($route['callback'])){
-                        echo Request::getURIpath() . "<br>";
+  
 
-                        echo Request::getParams($route)[0] . "<br>";
-                        echo Request::getParam($route, 1) . "<br>";
+                        // GET PARAMETER NAME FROM URI
+                        $uriExplosion = explode('/', $route['route']);
+                        array_shift($uriExplosion);
 
-                        call_user_func_array($route['callback'], $matches);
+                        $routeParameterName = [];
+                        foreach ($uriExplosion as $value) {
+                            if($value[0] == ":"){
+                                array_push($routeParameterName,str_replace(":", "", $value));
+                            }
+                        }
+
+                        // ASSEMBLE PARAMETER TABLE
+                        $parameters = array();
+                        for ($i=0; $i < count($matches); $i++) { 
+
+
+                            /**
+                             * CHECK IF ARRAY ALREADY HAS PARAMETER OF SAME NAME, IF YES ADD NUMBER TO IT
+                             */
+                            if(array_key_exists($routeParameterName[$i], $parameters)){
+                                $parameters[$routeParameterName[$i] . "_" . $i] = $matches[$i];
+                                break;
+                            }
+ 
+                           $parameters[$routeParameterName[$i]] = $matches[$i];
+                        }
+
+                        call_user_func($route['callback'], new Request($parameters), new Response());
+
                     }else{
                         Response::render($route['callback'], $matches);
                     }
