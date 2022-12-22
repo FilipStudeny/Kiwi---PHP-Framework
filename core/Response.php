@@ -29,7 +29,8 @@
          */
         public static function notFound(){
             header("HTTP/1.0 404 Page not found");
-            http_response_code(400);
+            header('Location: 404');
+            http_response_code(404);
             include_once('./views/404.php');
             
             exit();

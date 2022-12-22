@@ -2,14 +2,15 @@
 
     include_once './core/Router.php';
     include_once './core/Request.php';
+    include_once './controllers/UserController';
    
 
+    
     Router::get("/", "home.php");
-    Router::get("/user/:id", function($Request,$Response){
+    Router::get("/user", [UserController::class, 'index'] );
 
-        $Response->echo("Route reached");
 
-    });
+    Router::get("/user/:id", 'user.php');
 
     Router::get("/:id/:id", function(Request $Request, Response $Response){
 
@@ -30,8 +31,8 @@
 
     });
 
-    Router::get("/profile/:user", function($Request,$Response){
-        $Response->echo("Route reached");
+    Router::get("/profile/:user",  function(Request $Request, Response $Response){
+        $Response->echoMessage("Route reached");
 
     });
 
@@ -46,9 +47,10 @@
     });
 
     Router::get("/user/profile/:id", "admin.php");
-    Router::post("/user/new/:username", function($Request,$Response){
+    Router::post("/user/new/:username", function(Request $Request, Response $Response){
 
-        $Response->echo("Route reached");
+        Response::render('admin.php', $Request->getParams());
+
     });
 
     Router::get("/post/:id/comment/:id", function($Request,$Response){
@@ -61,6 +63,10 @@
 
 
     });
+
+    Router::get("/404", "404.php");
+
+
     Router::resolve();
 
 ?>

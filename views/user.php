@@ -1,6 +1,6 @@
 
 <?php
 
-    echo $_GET['id'];
-
+    echo "USER PAGE REACHED";
+    echo "User ID = " . $params['id'];
 ?>

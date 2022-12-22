@@ -55,14 +55,10 @@
 
                 if(preg_match($pattern, $path, $matches)){
                     $routeMatch = true;
-                }else{
-                    $routeMatch = false;
                 }
 
                 if($httpMethod === $route['method']){
                     $methodMatch = true;
-                }else{
-                    $methodMatch = false;
                 }
 
                 // CHECK IF ROTUE REQUEST MATCHES WITH REGISTERED ROUTES
@@ -70,42 +66,48 @@
 
                     array_shift($matches); //REMOVES FIRST ELEMENT
 
-                    if(is_callable($route['callback'])){
-  
+                     // GET PARAMETER NAME FROM URI
+                    $uriExplosion = explode('/', $route['route']);
+                    array_shift($uriExplosion);
 
-                        // GET PARAMETER NAME FROM URI
-                        $uriExplosion = explode('/', $route['route']);
-                        array_shift($uriExplosion);
+                    $parameters = array();
 
+                    if(count($uriExplosion) != 1){
                         $routeParameterName = [];
                         foreach ($uriExplosion as $value) {
                             if($value[0] == ":"){
                                 array_push($routeParameterName,str_replace(":", "", $value));
                             }
                         }
-
+    
                         // ASSEMBLE PARAMETER TABLE
-                        $parameters = array();
                         for ($i=0; $i < count($matches); $i++) { 
-
-
+    
                             /**
-                             * CHECK IF ARRAY ALREADY HAS PARAMETER OF SAME NAME, IF YES ADD NUMBER TO IT
-                             */
+                              * CHECK IF ARRAY ALREADY HAS PARAMETER OF SAME NAME, IF YES ADD NUMBER TO IT
+                              */
                             if(array_key_exists($routeParameterName[$i], $parameters)){
                                 $parameters[$routeParameterName[$i] . "_" . $i] = $matches[$i];
                                 break;
                             }
- 
-                           $parameters[$routeParameterName[$i]] = $matches[$i];
+    
+                            $parameters[$routeParameterName[$i]] = $matches[$i];
                         }
-
-                        call_user_func($route['callback'], new Request($parameters), new Response());
-
                     }else{
-                        Response::render($route['callback'], $matches);
+                        $parameters[0] = "No parameters captured";
                     }
-                    break;
+
+
+
+                    if(is_callable($route['callback']) || is_array($route['callback'])){
+                        call_user_func($route['callback'], new Request($parameters), new Response());
+                        break;
+                    }
+
+                    if(is_string($route['callback'])){
+                        Response::render($route['callback'], $parameters );
+                        break;
+                    }
                 }
             }
 
