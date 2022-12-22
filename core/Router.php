@@ -43,6 +43,8 @@
             $path = Request::getURIpath(); //$_SERVER['REQUEST_URI'];
             $httpMethod = Request::getHTTPmethod(); //$_SERVER['REQUEST_METHOD'];
 
+            echo $path;
+
             $methodMatch = false;
             $routeMatch = false;
 
@@ -94,7 +96,7 @@
                             $parameters[$routeParameterName[$i]] = $matches[$i];
                         }
                     }else{
-                        $parameters[0] = "No parameters captured";
+                        $parameters = "No parameters captured";
                     }
 
 

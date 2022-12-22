@@ -9,13 +9,16 @@
     Router::get("/", "home.php");
     Router::get("/user", [UserController::class, 'index'] );
 
+    Router::post("/user",  function(Request $Request, Response $Response){
+
+        echo "FORM POST ";
+    });
 
     Router::get("/user/:id", 'user.php');
 
     Router::get("/:id/:id", function(Request $Request, Response $Response){
 
         //$params = $Request->getParams();
-       
 
         $Response->echoMessage("Route reached");
 
