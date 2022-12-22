@@ -1,12 +1,13 @@
 <?php
 
-class UserController{
 
-    public static function index(){
-        echo "USER CONTROLLER REACHED";
-        Response::render('user.php');
-        exit();
+    class UserController{
+
+        public static function index(){
+            echo "USER CONTROLLER REACHED";
+            Response::render('user.php');
+            exit();
+        }
     }
-}
 
 ?>

@@ -2,15 +2,19 @@
 
     include_once './core/Router.php';
     include_once './core/Request.php';
+    include_once './core/Response.php';
     include_once './controllers/UserController';
-   
 
-    
+
+
     Router::get("/", "home.php");
+    
     Router::get("/user", [UserController::class, 'index'] );
 
     Router::post("/user",  function(Request $Request, Response $Response){
 
+        print_r($Request->getBody());
+        echo $Request->getPostData('name');
         echo "FORM POST ";
     });
 

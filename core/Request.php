@@ -1,5 +1,6 @@
 <?php
 
+    
     class Request{
 
 
@@ -38,6 +39,21 @@
         public static function getHTTPmethod(){
             return $_SERVER['REQUEST_METHOD'];
         }
+
+        /**
+         * GET HTTP POST BODY
+         */
+        public function getBody(){
+            return $_POST;
+        }
+
+        /**
+         * GET HTTP POST BODY PART
+         */
+        public function getPostData($index){
+            return $_POST[$index];
+        }
+
 
 
     }

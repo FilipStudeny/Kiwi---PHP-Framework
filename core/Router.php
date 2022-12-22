@@ -1,7 +1,6 @@
 <?php
-
-    include_once './core/Response.php';
     include_once './core/Request.php';
+    include_once './core/Response.php';
 
     class Router{
 
@@ -42,8 +41,6 @@
         public static function resolve(){
             $path = Request::getURIpath(); //$_SERVER['REQUEST_URI'];
             $httpMethod = Request::getHTTPmethod(); //$_SERVER['REQUEST_METHOD'];
-
-            echo $path;
 
             $methodMatch = false;
             $routeMatch = false;
@@ -95,10 +92,7 @@
     
                             $parameters[$routeParameterName[$i]] = $matches[$i];
                         }
-                    }else{
-                        $parameters = "No parameters captured";
                     }
-
 
 
                     if(is_callable($route['callback']) || is_array($route['callback'])){

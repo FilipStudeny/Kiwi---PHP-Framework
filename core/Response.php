@@ -3,12 +3,13 @@
     class Response{
 
         /**
-         * RENDER USER SPECIFIED PAGE WITH PARAMETERS
+         * RENDER USER SPECIFIED PAGE WITH PARAMETERS OR WITHOUT
          */
         public static function render($file, $params="" ,$viewsFolder='./views/'){
             include_once($viewsFolder . $file);
             exit();
         }
+
 
         public function echoMessage($message){
             echo $message;
