@@ -2,17 +2,64 @@
 
     class Response{
 
+        public static $pageComponents = [];
+
         /**
          * RENDER USER SPECIFIED PAGE WITH PARAMETERS OR WITHOUT
          */
-        public static function render($file, $params="" ,$viewsFolder='./views/'){
-            include_once($viewsFolder . $file);
+        public static function render($file, $params="" , $viewsFolder='./views/'){
+
+            $view = self::view($file, $params, $viewsFolder);
+
+            
+
+            if(count(self::$pageComponents) != 0){
+                $templates = [];
+                $files = [];
+                foreach(self::$pageComponents as $component){
+                    array_push($templates, $component['component']);
+                    array_push($files, file_get_contents('./views/components/' . $component['file']));
+                }
+
+                echo str_replace($templates, $files, $view);
+                exit();
+            }
+    
+            $layoutContent = self::renderPageComponent("header.php");
+            echo str_replace("{{header}}",$layoutContent, $view); 
             exit();
+        }
+
+
+        public static function view($file, $params="" , $viewsFolder='./views/'){
+            ob_start();
+            include_once($viewsFolder . $file);
+            return ob_get_clean();
+        }
+
+        public static function renderPageComponent($layout){
+            ob_start();
+            $componentPath = __DIR__ . Router::$viewFolder . Router::$componentFolder . "/";
+            include_once($componentPath . $layout);
+            return ob_get_clean();
+
+        }
+
+        public static function registerPageComponent($name, $file){
+            array_push(self::$pageComponents, [
+                'component' => "{{" . $name . "}}",
+                'file' => $file
+            ]);
         }
 
 
         public function echoMessage($message){
             echo $message;
+        }
+
+
+        public function setStatusCode($code){
+            http_response_code($code);
         }
 
         /**

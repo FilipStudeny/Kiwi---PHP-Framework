@@ -5,6 +5,9 @@
     class Router{
 
         public static $routes = [];
+        public static $rootDir = __DIR__;
+        public static $viewFolder = "../../views/";
+        public static $componentFolder = "components";
 
         public static function get($route, $callback){
             self::$routes[] = [
@@ -101,9 +104,10 @@
                     }
 
                     if(is_string($route['callback'])){
-                        Response::render($route['callback'], $parameters );
+                        Response::render($route['callback'], $parameters);
                         break;
                     }
+
                 }
             }
 

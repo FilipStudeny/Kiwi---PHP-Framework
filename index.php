@@ -24,6 +24,13 @@
 
         //$params = $Request->getParams();
 
+       // echo __DIR__ . "/views/layouts/";
+
+        foreach(glob(__DIR__ . "/views/layouts/*.php") as $file){
+
+            echo $file;
+        }
+
         $Response->echoMessage("Route reached");
 
     });

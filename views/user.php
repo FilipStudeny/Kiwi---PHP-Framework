@@ -1,9 +1,12 @@
 
+{{header}}
+
 <?php
 
     echo "USER PAGE REACHED";
 
 ?>
+
 
 <html>
     <body>
@@ -16,3 +19,5 @@
     
     </body>
     </html> 
+
+{{footer}}
