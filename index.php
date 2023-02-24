@@ -1,11 +1,10 @@
 <?php
 // Import the required classes
-include_once './core/Router.php';
-include_once './core/Request.php';
-include_once './core/Response.php';
+require_once './core/Request.php';
+require_once './core/Response.php';
 require_once './core/ViewParameters.php';
-
 require_once './core/Router.php';
+
 
 // Set the views folder
 Router::setViewsFolder('./views/');
@@ -31,6 +30,15 @@ Router::get('/:username/:id/:id', function(Request $req, Response $res) {
     echo "Welcome ! ";
 });
 
+// Define some routes
+Router::get('/:username/:id/post/:id', function(Request $req, Response $res) {
+    $params = $req->getParams();
+    $username = $params["username"];
+    $id = $params["id"];
+    $post = $params["id_2"];
+
+    echo "Welcome $username: $id = $post! ";
+});
 
 
 

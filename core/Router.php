@@ -74,7 +74,7 @@ class Router{
                 // Remove the first element, which is the entire matched string
                 array_shift($matches);
 
-                $parameters = RouteMatcher::assembleParameterTable($route, $matches);
+                $parameters = RouteParameterAssembler::assembleParameterTable($route, $matches);
 
                 // Execute the middleware functions
                 foreach (self::$middleware as $middleware) {
@@ -103,20 +103,22 @@ class Router{
     }
 }
 
-class RouteMatcher{
+class RouteParameterAssembler {
 
     public static function assembleParameterTable(array $route, array $matches): array{
         // GET PARAMETER NAME FROM URI
-        $uriExplosion = explode('/:', $route['route']);
-        array_shift($uriExplosion);
+        $uriExplosion = explode('/', $route['route']);
 
+        array_shift($uriExplosion);
         $parameters = array();
 
         if(count($uriExplosion) != 0){
-
+            
             $parameterNames = [];
             foreach ($uriExplosion as $param){
-                array_push($parameterNames, $param);
+                if($param[0] == ":"){
+                    array_push($parameterNames, str_replace(":", "", $param));
+                }
             }
 
             // ASSEMBLE PARAMETER TABLE

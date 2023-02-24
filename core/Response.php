@@ -17,22 +17,31 @@ class Response {
         exit();
 
     }
-
+    
     public static function render(string $view, array $parameters = []): void {
-        $viewPath = Router::$viewsFolder . "/$view.php";
+        $viewPath = self::getViewsFolder() . "/$view.php";
 
-        if(file_exists($viewPath)){
-            http_response_code(202);
-            extract($parameters);
-            include_once $viewPath;
-            exit();
-        }else{
+        if(!file_exists($viewPath)){
             self::notFound();
+        }
+
+        try {
+            http_response_code(200);
+            foreach ($parameters as $key => $value) {
+                $$key = $value;
+            }
+            include $viewPath;
+            exit();
+        } catch (Exception $e) {
+            echo "Error rendering view: " . $e->getMessage();
+            exit();
         }
     }
 
+    private static function getViewsFolder(): string {
+        return Router::$viewsFolder;
+    }
+
 }
-
-
 
 ?>

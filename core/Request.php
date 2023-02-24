@@ -20,7 +20,7 @@
          * GET SINGLE PARAMETER FROM ROUTE
          */
         public function getParameter($index){
-            return $this->parameters[$index];
+            return $this->parameters[$index] ?? null;
         }
 
         /**
@@ -41,14 +41,29 @@
          * GET HTTP POST BODY
          */
         public function getBody(){
-            return $_POST;
+            return $this->validateAndSanitize($_POST);
         }
 
         /**
          * GET HTTP POST BODY PART
          */
-        public function getPostData($index){
-            return $_POST[$index];
+        public function getPostData(string $index)
+        {
+            $postData = $this->getBody();
+            return $postData[$index] ?? null;
+        }
+
+        private function validateAndSanitize(array $data): array
+        {
+            $validated = [];
+    
+            foreach ($data as $key => $value) {
+                // Validate and sanitize $value here
+                // e.g. using filter_input() and htmlspecialchars()
+                $validated[$key] = htmlspecialchars(filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS));
+            }
+    
+            return $validated;
         }
 
     }
