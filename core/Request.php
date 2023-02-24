@@ -1,11 +1,8 @@
 <?php
 
-    
     class Request{
 
-
         private $parameters; //ROUTE PARAMETERS
-
 
         function __construct($parameters)
         {
@@ -54,8 +51,5 @@
             return $_POST[$index];
         }
 
-
-
     }
-
 ?>

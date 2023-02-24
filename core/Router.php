@@ -1,138 +1,140 @@
 <?php
-    include_once './core/Request.php';
-    include_once './core/Response.php';
+require_once './core/Request.php';
+require_once './core/Response.php';
 
-    class Router{
+class Router{
+    public static $routes = [];
+    public static $viewsFolder = "";
+    public static $middleware = [];
 
-        public static $routes = [];
-        public static $rootDir = __DIR__;
-        public static $viewFolder = "../../views/";
-        public static $componentFolder = "components";
-
-        public static function get($route, $callback){
-            self::$routes[] = [
-                'route' => $route,
-                'callback' => $callback,
-                'method' => 'GET'
-            ];
-        }
-
-        public static function post($route, $callback){
-            self::$routes[] = [
-                'route' => $route,
-                'callback' => $callback,
-                'method' => 'POST'
-            ];
-        }
-
-        public static function put($route, $callback){
-            self::$routes[] = [
-                'route' => $route,
-                'callback' => $callback,
-                'method' => 'PUT'
-            ];
-        }
-
-        public static function delete($route, $callback){
-            self::$routes[] = [
-                'route' => $route,
-                'callback' => $callback,
-                'method' => 'DELETE'
-            ];
-        }
-
-        public static function resolve(){
-            $path = Request::getURIpath(); //$_SERVER['REQUEST_URI'];
-            $httpMethod = Request::getHTTPmethod(); //$_SERVER['REQUEST_METHOD'];
-
-            $methodMatch = false;
-            $routeMatch = false;
-
-            //CHECK EACH ROUTE AND COMPARE IT WITH REQUEST URL
-            foreach(self::$routes as $route){
-
-                // CONVERTS URL TO REQULAR EXPRESSION
-                $pattern = "@^" . preg_replace('/\\\:[a-zA-Z0-9\_\-]+/', '([a-zA-Z0-9\-\_]+)', preg_quote($route['route'])) . "$@D";
-                $matches = Array();
-
-                if(preg_match($pattern, $path, $matches)){
-                    $routeMatch = true;
-                }
-
-                if($httpMethod === $route['method']){
-                    $methodMatch = true;
-                }
-
-                // CHECK IF ROTUE REQUEST MATCHES WITH REGISTERED ROUTES
-                if($routeMatch && $methodMatch) {
-
-                    array_shift($matches); //REMOVES FIRST ELEMENT
-
-                     // GET PARAMETER NAME FROM URI
-                    $uriExplosion = explode('/', $route['route']);
-                    array_shift($uriExplosion);
-
-                    $parameters = array();
-
-                    if(count($uriExplosion) != 1){
-                        $routeParameterName = [];
-                        foreach ($uriExplosion as $value) {
-                            if($value[0] == ":"){
-                                array_push($routeParameterName,str_replace(":", "", $value));
-                            }
-                        }
-    
-                        // ASSEMBLE PARAMETER TABLE
-                        for ($i=0; $i < count($matches); $i++) { 
-    
-                            /**
-                              * CHECK IF ARRAY ALREADY HAS PARAMETER OF SAME NAME, IF YES ADD NUMBER TO IT
-                              */
-                            if(array_key_exists($routeParameterName[$i], $parameters)){
-                                $parameters[$routeParameterName[$i] . "_" . $i] = $matches[$i];
-                                break;
-                            }
-    
-                            $parameters[$routeParameterName[$i]] = $matches[$i];
-                        }
-                    }
-
-
-                    if(is_callable($route['callback']) || is_array($route['callback'])){
-                        call_user_func($route['callback'], new Request($parameters), new Response());
-                        break;
-                    }
-
-                    if(is_string($route['callback'])){
-                        Response::render($route['callback'], $parameters);
-                        break;
-                    }
-
-                }
-            }
-
-            /*
-            * CHECK AND RENDER WRONG REQUESTS
-            */
-            if(!$routeMatch && !$methodMatch){
-                Response::notFound();
-            }
-        
-            if(!$routeMatch && $methodMatch){
-                Response::notFound();
-            }
-
-            if($routeMatch && !$methodMatch){
-                Response::wrongMethod();
-
-            }
-
-        }
-
-
-        
-
-
+    public static function setViewsFolder(string $viewsFolder): void{
+        self::$viewsFolder = $viewsFolder;
     }
 
+    public static function get(string $route, $callback): void{
+        self::$routes[] = [
+            'route' => $route,
+            'callback' => $callback,
+            'method' => 'GET'
+        ];
+    }
+
+    public static function post(string $route, $callback): void{
+        self::$routes[] = [
+            'route' => $route,
+            'callback' => $callback,
+            'method' => 'POST'
+        ];
+    }
+
+    public static function delete(string $route, $callback): void{
+        self::$routes[] = [
+            'route' => $route,
+            'callback' => $callback,
+            'method' => 'DELETE'
+        ];
+    }
+
+    public static function put(string $route, $callback): void{
+        self::$routes[] = [
+            'route' => $route,
+            'callback' => $callback,
+            'method' => 'PUT'
+        ];
+    }
+
+    public static function use(callable $middleware): void {
+        self::$middleware[] = $middleware;
+    }
+    
+    public static function resolve(): void {
+        $urlPath = Request::getURIpath();
+        $urlMethod = Request::getHTTPmethod();
+
+        $wrongMethod = false;
+        $routeFound = false;
+    
+        foreach (self::$routes as $route) {
+            // Replace any :param with a regular expression
+            $pattern = preg_replace('/:[a-zA-Z0-9]+/', '([a-zA-Z0-9-]+)', $route['route']);
+
+
+            // Check if the URL matches the pattern
+            if (preg_match("#^$pattern$#", $urlPath, $matches)) {
+
+                if($urlMethod != $route['method']){
+                    $wrongMethod = true;
+                    $routeFound = true;
+                    break;
+                }
+
+                $routeFound = true;
+                $wrongMethod = false;
+
+                // Remove the first element, which is the entire matched string
+                array_shift($matches);
+
+                $parameters = RouteMatcher::assembleParameterTable($route, $matches);
+
+                // Execute the middleware functions
+                foreach (self::$middleware as $middleware) {
+                    $middleware();
+                }
+                
+                // Execute the callback function
+                $callback = $route['callback'];
+                
+                if(is_callable($callback)){
+                    call_user_func($callback, new Request($parameters), new Response);
+                }else{
+                    Response::render($callback);
+                }
+                return;
+            }
+        }
+
+        if(!$routeFound){
+            Response::notFound();
+        }
+
+        if($routeFound && $wrongMethod){
+            Response::wrongMethod($urlMethod);
+        }   
+    }
+}
+
+class RouteMatcher{
+
+    public static function assembleParameterTable(array $route, array $matches): array{
+        // GET PARAMETER NAME FROM URI
+        $uriExplosion = explode('/:', $route['route']);
+        array_shift($uriExplosion);
+
+        $parameters = array();
+
+        if(count($uriExplosion) != 0){
+
+            $parameterNames = [];
+            foreach ($uriExplosion as $param){
+                array_push($parameterNames, $param);
+            }
+
+            // ASSEMBLE PARAMETER TABLE
+            for ($i=0; $i < count($matches); $i++) { 
+                /**
+                * CHECK IF ARRAY ALREADY HAS PARAMETER OF SAME NAME, IF YES ADD NUMBER TO IT
+                */
+                if(array_key_exists($parameterNames[$i], $parameters)){
+                    $parameters[$parameterNames[$i] . "_" . $i] = $matches[$i];
+                    break;
+                }
+                        
+                $parameters[$parameterNames[$i]] = $matches[$i];
+            }
+        }
+        return $parameters;
+    }
+}
+
 ?>
+

@@ -1,86 +1,42 @@
 <?php
+// Import the required classes
+include_once './core/Router.php';
+include_once './core/Request.php';
+include_once './core/Response.php';
+require_once './core/ViewParameters.php';
 
-    include_once './core/Router.php';
-    include_once './core/Request.php';
-    include_once './core/Response.php';
-    include_once './controllers/UserController';
+require_once './core/Router.php';
 
+// Set the views folder
+Router::setViewsFolder('./views/');
 
+// Define some routes
+Router::get('/', "home" );
 
-    Router::get("/", "home.php");
-    
-    Router::get("/user", [UserController::class, 'index'] );
+// Define some routes
+Router::get('/:username', function(Request $req, Response $res) {
+    $name = $req->getParameter("username");
 
-    Router::post("/user",  function(Request $Request, Response $Response){
+    $params = new ViewParameters();
+    $params->addParameters('username', $name);
 
-        print_r($Request->getBody());
-        echo $Request->getPostData('name');
-        echo "FORM POST ";
-    });
+    Response::render("profile", $params->getParameters());
+});
 
-    Router::get("/user/:id", 'user.php');
+// Define some routes
+Router::get('/:username/:id/:id', function(Request $req, Response $res) {
+    $params = $req->getParams();
 
-    Router::get("/:id/:id", function(Request $Request, Response $Response){
-
-        //$params = $Request->getParams();
-
-       // echo __DIR__ . "/views/layouts/";
-
-        foreach(glob(__DIR__ . "/views/layouts/*.php") as $file){
-
-            echo $file;
-        }
-
-        $Response->echoMessage("Route reached");
-
-    });
-
-    Router::get("/user/:id/post/:id", function(Request $Request, Response $Response){
-
-        $params = $Request->getParams();
-        echo "User:" . $params['id'] . "<br>";
-        echo "ID:" . $params['id_1'] . "<br>";
-
-        $Response->echoMessage("Route reached");
-
-    });
-
-    Router::get("/profile/:user",  function(Request $Request, Response $Response){
-        $Response->echoMessage("Route reached");
-
-    });
-
-    Router::get("/profile/:user/:id",  function(Request $Request, Response $Response){
-
-        $params = $Request->getParams();
-        echo $params['id'];
-        echo $Request->getParameter('user');
-
-        $Response->echoMessage("Route reached");
-
-    });
-
-    Router::get("/user/profile/:id", "admin.php");
-    Router::post("/user/new/:username", function(Request $Request, Response $Response){
-
-        Response::render('admin.php', $Request->getParams());
-
-    });
-
-    Router::get("/post/:id/comment/:id", function($Request,$Response){
-        $params = $Request->getParams();
-        
-        print_r($params);
+    print_r($params);
+    echo "Welcome ! ";
+});
 
 
-        $Response->echoMessage("Route reached");
 
 
-    });
-
-    Router::get("/404", "404.php");
 
 
-    Router::resolve();
+// Resolve route and send response
+Router::resolve();
 
 ?>
