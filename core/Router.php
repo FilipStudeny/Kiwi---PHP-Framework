@@ -11,35 +11,39 @@ class Router{
         self::$viewsFolder = $viewsFolder;
     }
 
-    public static function get(string $route, $callback): void{
+    public static function get(string $route, $callback, callable $middleware=null): void{
         self::$routes[] = [
             'route' => $route,
             'callback' => $callback,
-            'method' => 'GET'
+            'method' => 'GET',
+            'middleware' => $middleware
         ];
     }
 
-    public static function post(string $route, $callback): void{
+    public static function post(string $route, $callback, callable $middleware=null): void{
         self::$routes[] = [
             'route' => $route,
             'callback' => $callback,
-            'method' => 'POST'
+            'method' => 'POST',
+            'middleware' => $middleware
         ];
     }
 
-    public static function delete(string $route, $callback): void{
+    public static function delete(string $route, $callback, callable $middleware=null): void{
         self::$routes[] = [
             'route' => $route,
             'callback' => $callback,
-            'method' => 'DELETE'
+            'method' => 'DELETE',
+            'middleware' => $middleware
         ];
     }
 
-    public static function put(string $route, $callback): void{
+    public static function put(string $route, $callback, callable $middleware=null): void{
         self::$routes[] = [
             'route' => $route,
             'callback' => $callback,
-            'method' => 'PUT'
+            'method' => 'PUT',
+            'middleware' => $middleware
         ];
     }
 
@@ -76,10 +80,12 @@ class Router{
 
                 $parameters = RouteParameterAssembler::assembleParameterTable($route, $matches);
 
-                // Execute the middleware functions
-                foreach (self::$middleware as $middleware) {
-                    $middleware();
+
+
+                if (is_callable($route['middleware'])){
+                    call_user_func($route['middleware']);
                 }
+
                 
                 // Execute the callback function
                 $callback = $route['callback'];
@@ -108,19 +114,22 @@ class RouteParameterAssembler {
     public static function assembleParameterTable(array $route, array $matches): array{
         // GET PARAMETER NAME FROM URI
         $uriExplosion = explode('/', $route['route']);
-
         array_shift($uriExplosion);
-        $parameters = array();
 
+        // Define the callback function to filter the array
+        $callback = function($value) {
+            return strpos($value, ':') === 0; // Check if the string starts with ":"
+        };
+        // Use array_filter to remove strings that don't start with ":"
+        $result = array_filter($uriExplosion, $callback);
+        $parameters = array();
         if(count($uriExplosion) != 0){
             
             $parameterNames = [];
-            foreach ($uriExplosion as $param){
-                if($param[0] == ":"){
-                    array_push($parameterNames, str_replace(":", "", $param));
-                }
+            foreach ($result as $param){
+                array_push($parameterNames, str_replace(":", "", $param));
             }
-
+            
             // ASSEMBLE PARAMETER TABLE
             for ($i=0; $i < count($matches); $i++) { 
                 /**
@@ -134,6 +143,7 @@ class RouteParameterAssembler {
                 $parameters[$parameterNames[$i]] = $matches[$i];
             }
         }
+
         return $parameters;
     }
 }

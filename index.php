@@ -9,8 +9,24 @@ require_once './core/Router.php';
 // Set the views folder
 Router::setViewsFolder('./views/');
 
+function logEcho(){
+    echo "MIDDLEWARE EXECUTED";
+};
+
+
+Router::use('logEcho');
+
 // Define some routes
 Router::get('/', "home" );
+
+
+
+Router::get('/user/:username', function(Request $req, Response $res){
+    $name = $req->getParameter("username");
+    
+    echo "Hello: $name !";
+}, 'logEcho' );
+
 
 // Define some routes
 Router::get('/:username', function(Request $req, Response $res) {

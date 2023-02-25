@@ -52,17 +52,25 @@
             $postData = $this->getBody();
             return $postData[$index] ?? null;
         }
-
+        
+        /**
+         * Validate and sanitize POST data
+         */
         private function validateAndSanitize(array $data): array
         {
             $validated = [];
-    
+
             foreach ($data as $key => $value) {
                 // Validate and sanitize $value here
                 // e.g. using filter_input() and htmlspecialchars()
-                $validated[$key] = htmlspecialchars(filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS));
+                $filteredValue = filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS);
+                if (empty($filteredValue)) {
+                    throw new Exception("Value for '$key' is required");
+                }
+
+                $validated[$key] = htmlspecialchars($filteredValue);
             }
-    
+
             return $validated;
         }
 
