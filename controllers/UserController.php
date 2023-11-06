@@ -1,7 +1,9 @@
 <?php
 
 
-    class UserController{
+use core\http\Response;
+
+class UserController{
 
         public static function index(){
             echo "USER CONTROLLER REACHED";

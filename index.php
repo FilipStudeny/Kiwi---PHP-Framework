@@ -1,52 +1,56 @@
 <?php
 // Import the required classes
-require_once './core/Request.php';
-require_once './core/Response.php';
+use core\http\Next;
+use core\http\Request;
+use core\http\Response;
+
 require_once './core/ViewParameters.php';
 require_once './core/Router.php';
 
 
 // Set the views folder
 Router::setViewsFolder('./views/');
+Router::setErrorPageRoutes('./views/Errors/');
 
-function logEcho(){
-    echo "MIDDLEWARE EXECUTED";
-};
+function logEcho(Request $request, Next $next): Next{
+    $username = $request->getParameter("username");
+    $modifiedUsername = strtoupper($username);
+    $next->setModifiedData(['username' => $modifiedUsername]);
+    return $next;
+}
 
 
 Router::use('logEcho');
 
 // Define some routes
-Router::get('/', "home" );
+Router::get('/', "home", 'logEcho' );
+Router::post('/postsend', function(Request $req, Response $res) {
+    echo "Site reached";
+});
 
-
-
-Router::get('/user/:username', function(Request $req, Response $res){
-    $name = $req->getParameter("username");
-    
-    echo "Hello: $name !";
-}, 'logEcho' );
-
-
-// Define some routes
 Router::get('/:username', function(Request $req, Response $res) {
     $name = $req->getParameter("username");
 
     $params = new ViewParameters();
     $params->addParameters('username', $name);
+    $params->addParameters('page', 1);
 
     Response::render("profile", $params->getParameters());
-});
+}, 'logEcho');
 
-// Define some routes
+Router::get('/user/:username', function(Request $req, Response $res){
+    $username = $req->getParameter("username");
+
+    echo "Hello: $username !";
+}, 'logEcho' );
+
 Router::get('/:username/:id/:id', function(Request $req, Response $res) {
     $params = $req->getParams();
 
     print_r($params);
     echo "Welcome ! ";
-});
+}, 'logEcho');
 
-// Define some routes
 Router::get('/:username/:id/post/:id', function(Request $req, Response $res) {
     $params = $req->getParams();
     $username = $params["username"];
@@ -55,8 +59,6 @@ Router::get('/:username/:id/post/:id', function(Request $req, Response $res) {
 
     echo "Welcome $username: $id = $post! ";
 });
-
-
 
 
 

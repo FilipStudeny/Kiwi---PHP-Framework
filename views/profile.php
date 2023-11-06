@@ -1,3 +1,5 @@
-<h1>Hello user</h1>
+<h1>Hello @username </h1>
 
-<h2> <?= $username ?> </h2>
+@component("header")
+
+@component("body", ['username' => @username, 'page' => @1 ])

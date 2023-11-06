@@ -1,2 +1,3 @@
-<h1>HEADER</h1>
-<a href="/"> HOME PAGE </a>
+<header>
+    <h1>Header Content</h1>
+</header>
