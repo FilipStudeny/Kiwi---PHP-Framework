@@ -7,10 +7,8 @@
 -   Rendering page with/without parameters
 -   Simple Controller handling
 
-
 ## TODO
 -   Tons of stuff
-
 
 ## HOW TO USE ?
 
@@ -48,15 +46,17 @@ Router::setErrorPageRoutes('./views/Errors/');
     Router::get("/", "home.php");
     
     RENDER PAGE WITH COMPONENTS
-    Router::get('/:username', function(Request $req, Response $res) {
+     Router::get('/:username', function(Request $req, Response $res) {
         $name = $req->getParameter("username");
+        $users = ['admin', 'pepa', 'bogo'];
     
         $params = new ViewParameters();
         $params->addParameters('username', $name);
         $params->addParameters('page', 1);
+        $params->addParameters('users', $users);
     
-        Response::render("profile", $params->getParameters());
-    });
+        Response::renderTemplate("profile", $params->getParameters());
+    }, 'logEcho');
     
     ROUTING WITH CONTROLLER - WILL BE REIMPLEMENTED AND IMPROVED
     Router::get("/user", [UserController::class, 'index'] );
@@ -93,34 +93,63 @@ header.php:
 ```PHP
 <header>
     <h1>Header Content</h1>
+    <h1>{{username}}</h1>
+    <h1>{{id}}</h1>
+    <h1>{{pass}}</h1>
 </header>
 ```
 
 2. Create a view inside the /views directory an register component with parameters:
 ```PHP
-<h1>Hello @username </h1>
+<h1>{{username}}</h1>
+<h1>{{page}}</h1>
 
-@component("header")
-@component("body", ['username' => @username, 'page' => @1 ])
+
+@component('header', {"id": 1,"pass":123,"username": "pepa"})
+@component('header', {
+    "id": 1,
+    "pass":123,
+    "username":"asd"
+})
+
+{{users}}
+@loop(users as $user)
+    <p>{{user}}</p>
+@endloop
+
 ```
 3. Create route and register parameters:
 ```PHP
 Router::get('/:username', function(Request $req, Response $res) {
     $name = $req->getParameter("username");
-
+    $users = ['admin', 'pepa', 'bogo'];
+    
     $params = new ViewParameters();
     $params->addParameters('username', $name);
     $params->addParameters('page', 1);
+    $params->addParameters('users', $users);
 
-    Response::render("profile", $params->getParameters());
-});
+    Response::renderTemplate("profile", $params->getParameters());
+}, 'logEcho');
 ```
 
 4. Will be rendered as:
 ```HTML
-Hello admin
+ADMIN
+1
 Header Content
+pepa
+1
+123
+Header Content
+asd
+1
+123
+admin, pepa, bogo
 
-Username: ADMIN
-Page number: 1
+admin
+
+pepa
+
+bogo
 ```

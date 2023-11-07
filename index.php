@@ -30,10 +30,12 @@ Router::post('/postsend', function(Request $req, Response $res) {
 
 Router::get('/:username', function(Request $req, Response $res) {
     $name = $req->getParameter("username");
+    $users = ['admin', 'pepa', 'bogo'];
 
     $params = new ViewParameters();
     $params->addParameters('username', $name);
     $params->addParameters('page', 1);
+    $params->addParameters('users', $users);
 
     Response::renderTemplate("profile", $params->getParameters());
 }, 'logEcho');

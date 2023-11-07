@@ -21,10 +21,15 @@ class TemplateEngine
         $this->templateData = [];
     }
 
-    public function set(string $name, string $value): void
+    public function set(string $name, $value): void
     {
-        $this->templateData[$name] = $value;
+        if (is_array($value)) {
+            $this->templateData[$name] = $value;
+        } else {
+            $this->templateData[$name] = $value;
+        }
     }
+
 
     /**
      * @throws Exception
@@ -39,8 +44,10 @@ class TemplateEngine
         }
 
         $templateContent = $this->loadComponents($templateContent);
+        $templateContent = $this->handleLoop($templateContent);
 
         foreach ($this->templateData as $key => $value) {
+            $value = is_array($value) ? implode(', ', $value) : (string) $value;
             $templateContent = str_replace("{{" . $key . "}}", $value, $templateContent);
         }
 
@@ -93,6 +100,36 @@ class TemplateEngine
             } else {
                 throw new Exception('Component ' . $componentName . ' not found!');
             }
+        }
+        $templateContent = $this->handleLoop($templateContent);
+        return $templateContent;
+    }
+    /**
+     * Loop through a range and execute the given template content for each iteration.
+     *
+     * @throws Exception
+     */
+
+    protected function handleLoop(string $templateContent): string
+    {
+        $pattern = '/@loop\((\w+)\s+as\s+(\$\w+)\)(.*?)@endloop/s';
+        preg_match_all($pattern, $templateContent, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            $loopArrayName = trim($match[1]);
+            $loopVariableName = trim($match[2], '$');
+            $loopContent = '';
+
+            if (!array_key_exists($loopArrayName, $this->templateData) || !is_array($this->templateData[$loopArrayName])) {
+                throw new Exception('Invalid or missing array for loop: ' . $loopArrayName);
+            }
+
+            foreach ($this->templateData[$loopArrayName] as $loopItem) {
+                $iteratedContent = str_replace('{{' . $loopVariableName . '}}', $loopItem, $match[3]);
+                $loopContent .= $this->loadComponents($iteratedContent); // Process components inside the loop
+            }
+
+            $templateContent = str_replace($match[0], $loopContent, $templateContent);
         }
 
         return $templateContent;

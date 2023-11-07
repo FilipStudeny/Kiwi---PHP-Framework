@@ -62,6 +62,7 @@ class View
             $templateEngine->set($key, $value);
         }
 
+
         try {
             http_response_code(200);
             $templateEngine->render("/$view.php");
