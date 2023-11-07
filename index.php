@@ -35,7 +35,7 @@ Router::get('/:username', function(Request $req, Response $res) {
     $params->addParameters('username', $name);
     $params->addParameters('page', 1);
 
-    Response::render("profile", $params->getParameters());
+    Response::renderTemplate("profile", $params->getParameters());
 }, 'logEcho');
 
 Router::get('/user/:username', function(Request $req, Response $res){

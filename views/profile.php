@@ -1,5 +1,10 @@
-<h1>Hello @username </h1>
 
-@component("header")
+<h1>{{username}}</h1>
+<h1>{{page}}</h1>
+@component('header', {"id": 1,"pass":123,"username": "pepa"})
 
-@component("body", ['username' => @username, 'page' => @1 ])
+@component('header', {
+    "id": 1,
+    "pass":123,
+    "username":"asd"
+})

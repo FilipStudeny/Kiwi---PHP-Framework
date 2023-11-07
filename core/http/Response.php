@@ -1,9 +1,12 @@
 <?php
 
 namespace core\http;
+use core\views\View;
 use Exception;
 use Router;
 use ViewParameters;
+use core\views;
+require_once './core/views/View.php';
 
 class Response
 {
@@ -38,7 +41,7 @@ class Response
     }
 
     /**
-     * Render a view with components
+     * Render a view without components
      * @param string $view - The view to render
      * @param array $parameters - URL parameters to be used inside the view
      * @param bool $isErrorRoute - Flag for error route
@@ -46,49 +49,23 @@ class Response
      */
     public static function render(string $view, array $parameters = [], bool $isErrorRoute = false): void
     {
-        $viewPath = $isErrorRoute ? Router::getErrorPageRoutes() . "/$view.php" : self::getViewsFolder() . "/$view.php";
-
-        if (!file_exists($viewPath)) {
-            self::notFound();
-        }
-
-        // Load the view content
-        ob_start();
-        extract($parameters);
-        include $viewPath;
-        $viewContent = ob_get_clean();
-
-        // Handle the components with parameters
-        $viewContent = preg_replace_callback('/@component\("(\w+)"(?:\s*,\s*\[(.*)\])?\)/', function ($matches) use ($parameters) {
-            $componentPath = self::getViewsFolder() . "/components/{$matches[1]}.php";
-            $componentParams = [];
-            if (!empty($matches[2])) {
-                $paramsString = $matches[2];
-                preg_match_all('/\'(\w+)\'\s*=>\s*(\w+)/', $paramsString, $paramMatches, PREG_SET_ORDER);
-                foreach ($paramMatches as $match) {
-                    $componentParams[$match[1]] = $parameters[$match[2]] ?? $match[2];
-                }
-            }
-            if (file_exists($componentPath)) {
-                ob_start();
-                extract(array_merge($parameters, $componentParams));
-                include $componentPath;
-                $componentContent = ob_get_clean();
-                return $componentContent;
-            }
-            return '';
-        }, $viewContent);
-
-        // Replace parameters enclosed in @ with their values
-        $viewContent = preg_replace_callback('/@(\w+)/', function ($match) use ($parameters) {
-            return $parameters[$match[1]] ?? $match[0];
-        }, $viewContent);
-
-        // Output the rendered content
-        echo $viewContent;
+        $newView = new View(self::getViewsFolder());
+        $newView->renderStatic($view, $parameters, $isErrorRoute);
     }
 
-
+    /**
+     * Render a view with components
+     * @param string $view - The view to render
+     * @param array $parameters - URL parameters to be used inside the view
+     * @param bool $isErrorRoute - Flag for error route
+     * @return void - Returns the rendered view
+     * @throws Exception
+     */
+    public static function renderTemplate(string $view, array $parameters = [], bool $isErrorRoute = false): void
+    {
+        $newView = new View(self::getViewsFolder());
+        $newView->render($view, $parameters, $isErrorRoute);
+    }
 
     /**
      * GET VIEWS DIRECTORY FROM ROUTER
