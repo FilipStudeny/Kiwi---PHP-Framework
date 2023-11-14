@@ -46,14 +46,53 @@ class TemplateEngine
         }
 
         $templateContent = $this->loadComponents($templateContent, $this->COMPONENT_RENDER_DEPTH);
-        $templateContent = $this->handleLoop($templateContent);
+        $templateContent = $this->handleLoops($templateContent);
+
+        print_r($this->templateData);
 
         foreach ($this->templateData as $key => $value) {
-            $value = is_array($value) ? implode(', ', $value) : (string) $value;
+            if (is_array($value)) {
+                $value = $this->renderArrays($value);
+            } else {
+                $value = is_array($value) ? $this->renderNestedArray($value) : $value;
+            }
+
             $templateContent = str_replace("{{" . $key . "}}", $value, $templateContent);
         }
 
         echo $templateContent;
+    }
+
+
+
+    protected function renderArrays(array $array): string
+    {
+        $result = '';
+
+        foreach ($array as $item) {
+            if (is_array($item)) {
+                $result .= $this->renderNestedArray($item) . ', ';
+            } else {
+                $result .= $item . ', ';
+            }
+        }
+
+        return rtrim($result, ', ');
+    }
+
+    protected function renderNestedArray(array $array): string
+    {
+        $nestedContent = '';
+
+        foreach ($array as $nestedItem) {
+            if (is_array($nestedItem)) {
+                $nestedContent .= '[' . $this->renderArrays($nestedItem) . '], ';
+            } else {
+                $nestedContent .= $nestedItem . ', ';
+            }
+        }
+
+        return rtrim($nestedContent, ', ');
     }
 
     /**
@@ -110,7 +149,17 @@ class TemplateEngine
      * @throws Exception
      */
 
-    protected function handleLoop(string $templateContent): string
+    protected function handleLoops(string $templateContent): string
+    {
+        $templateContent = $this->handleLoopDirectives($templateContent);
+
+        return $templateContent;
+    }
+
+    /**
+     * @throws Exception
+     */
+    protected function handleLoopDirectives(string $templateContent): string
     {
         $pattern = '/@loop\((\w+)\s+as\s+(\$\w+)\)(.*?)@endloop/s';
         preg_match_all($pattern, $templateContent, $matches, PREG_SET_ORDER);
@@ -134,4 +183,5 @@ class TemplateEngine
 
         return $templateContent;
     }
+
 }

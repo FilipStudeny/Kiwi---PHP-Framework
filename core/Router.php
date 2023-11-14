@@ -10,11 +10,11 @@ require_once './core/http/Response.php';
 
 
 class Router{
-    public static $routes = [];
-    public static $viewsFolder = "";
-    public static $middleware = [];
+    public static array $routes = [];
+    public static string $viewsFolder = "";
+    public static array $middleware = [];
 
-    private static $COMPONENT_RENDER_DEPTH = 2;
+    private static int $COMPONENT_RENDER_DEPTH = 2;
 
     private static string $errorPageRoutes = "Errors";
 
@@ -79,9 +79,6 @@ class Router{
                     break;
                 }
 
-                $routeFound = true;
-                $wrongMethod = false;
-
                 array_shift($matches);
 
                 $parameters = RouteParameterAssembler::assembleParameterTable($route, $matches);
@@ -144,7 +141,7 @@ class RouteParameterAssembler {
 
         // Define the callback function to filter the array
         $callback = function($value) {
-            return strpos($value, ':') === 0; // Check if the string starts with ":"
+            return str_starts_with($value, ':'); // Check if the string starts with ":"
         };
         // Use array_filter to remove strings that don't start with ":"
         $result = array_filter($uriExplosion, $callback);
@@ -153,7 +150,7 @@ class RouteParameterAssembler {
 
             $parameterNames = [];
             foreach ($result as $param){
-                array_push($parameterNames, str_replace(":", "", $param));
+                $parameterNames[] = str_replace(":", "", $param);
             }
 
             // ASSEMBLE PARAMETER TABLE
@@ -174,4 +171,4 @@ class RouteParameterAssembler {
     }
 }
 
-?>
+

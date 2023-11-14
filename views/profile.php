@@ -11,5 +11,5 @@
 
 {{users}}
 @loop(users as $user)
-    <p>{{user}}</p>
+<p>{{user}}</p>
 @endloop

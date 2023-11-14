@@ -1,43 +1,45 @@
 <?php
 
 namespace core\http;
+
 use core\views\View;
 use Exception;
+use JetBrains\PhpStorm\NoReturn;
 use Router;
 use ViewParameters;
-use core\views;
+
 require_once './core/views/View.php';
 
 class Response
 {
+    public const HTTP_OK = 200;
+    public const HTTP_NOT_FOUND = 404;
+    public const HTTP_METHOD_NOT_ALLOWED = 405;
 
     /**
      * RENDER 404 PAGE
      * @return void - Returns a 404 page
      */
-    public static function notFound(): void
+    #[NoReturn] public static function notFound(): void
     {
-        // If no matching route was found, show a 404 page
-        http_response_code(404);
+        self::setStatusCode(self::HTTP_NOT_FOUND);
         self::render('404', (array)null, true);
         exit();
     }
 
     /**
      * RENDER MESSAGE IF WRONG HTTP METHOD WAS USED ON A ROUTE
-     * @param string $method - HTTPM Method
+     * @param string $method - HTTP Method
      * @return void - Returns a message if wrong HTTP method was used
      */
-    public static function wrongMethod(string $method): void
+    #[NoReturn] public static function wrongMethod(string $method): void
     {
-        // If no matching route was found, show a 404 page
-        http_response_code(405);
+        self::setStatusCode(self::HTTP_METHOD_NOT_ALLOWED);
         header("Allow: GET, POST, PUT, DELETE");
         $params = new ViewParameters();
         $params->addParameters('method', $method);
         self::render('405', $params->getParameters(), true);
         exit();
-
     }
 
     /**
@@ -81,34 +83,34 @@ class Response
      * @param string $url - URL target to redirect to
      * @param int $statusCode
      */
-    public static function redirect(string $url, int $statusCode = 302): void
+    #[NoReturn] public static function redirect(string $url, int $statusCode = 302): void
     {
         header("Location: $url", true, $statusCode);
         exit();
     }
 
     /**
-     * SEND JSON-ENCODED DATA AS REPONSE
+     * SEND JSON-ENCODED DATA AS RESPONSE
      * @param array $data - Data to send
-     * @param int $statucCode - HTTP status code
+     * @param int $statusCode - HTTP status code
      */
-    public static function json(array $data, int $statusCode = 200): void
+    #[NoReturn] public static function json(array $data, int $statusCode = self::HTTP_OK): void
     {
-        header('Content-Type: application/json');
-        http_response_code($statusCode);
+        self::setContentType('application/json');
+        self::setStatusCode($statusCode);
         echo json_encode($data);
         exit();
     }
 
     /**
-     * SEND TEXT AS REPONSE
-     * @param array $data - Data to send
-     * @param int $statucCode - HTTP status code
+     * SEND TEXT AS RESPONSE
+     * @param string $text - Text to send
+     * @param int $statusCode - HTTP status code
      */
-    public static function text(string $text, int $statusCode = 200): void
+    #[NoReturn] public static function text(string $text, int $statusCode = self::HTTP_OK): void
     {
-        header('Content-Type: text/plain');
-        http_response_code($statusCode);
+        self::setContentType('text/plain');
+        self::setStatusCode($statusCode);
         echo $text;
         exit();
     }
@@ -119,23 +121,37 @@ class Response
      * @param string $fileName - Name of file to send (optional)
      * @return void - Sends file as response
      */
-    public static function file(string $filePath, string $fileName = ''): void
+    #[NoReturn] public static function file(string $filePath, string $fileName = ''): void
     {
         if (!file_exists($filePath)) {
             self::notFound();
         }
 
-        // Set appropriate headers
         header('Content-Type: ' . mime_content_type($filePath));
         header('Content-Length: ' . filesize($filePath));
         header('Content-Disposition: attachment; filename="' . ($fileName ?: basename($filePath)) . '"');
 
-        // Send file contents
         readfile($filePath);
         exit();
     }
 
+    /**
+     * Set HTTP response status code
+     * @param int $statusCode - HTTP status code
+     */
+    private static function setStatusCode(int $statusCode): void
+    {
+        http_response_code($statusCode);
+    }
 
+    /**
+     * Set content type for the response
+     * @param string $contentType - Content type for the response
+     */
+    private static function setContentType(string $contentType): void
+    {
+        header('Content-Type: ' . $contentType);
+    }
 }
 
 ?>

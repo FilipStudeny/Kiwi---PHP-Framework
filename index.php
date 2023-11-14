@@ -11,7 +11,7 @@ require_once './core/Router.php';
 // Set the views folder
 Router::setViewsFolder('./views/');
 Router::setErrorPageRoutes('./views/Errors/');
-Router::setComponentRenderDepth(2);
+Router::setComponentRenderDepth(1);
 
 function logEcho(Request $request, Next $next): Next{
     $username = $request->getParameter("username");
@@ -25,20 +25,33 @@ Router::use('logEcho');
 
 // Define some routes
 Router::get('/', "home", 'logEcho' );
+Router::get('/debug', function(Request $req, Response $res) {
+
+    echo $req->getIPAddress();
+    echo $req->getClientIP();
+    echo $req->getRequestHost();
+});
 Router::post('/postsend', function(Request $req, Response $res) {
     echo "Site reached";
 });
 
 Router::get('/:username', function(Request $req, Response $res) {
+
     $name = $req->getParameter("username");
     $users = ['admin', 'pepa', 'bogo'];
-    $users2 = [['admin', 0], ['pepa', 1], ['bogo', 2]];
+    $users3 = [['admin', [0,"a"]], ['pepa', [1, "b"]], ['bogo', [2, "c"]], ['Borg', [3, "d"]]];
+    $nestedArray = [
+        ['Alice', ['apple', 'orange']],
+        ['Bob', ['banana', 'grapes']],
+        ['Charlie', ['kiwi', 'melon']]
+    ];
 
     $params = new ViewParameters();
     $params->addParameters('username', $name);
     $params->addParameters('page', 1);
     $params->addParameters('users', $users);
-   // $params->addParameters('users2', $users2);
+    $params->addParameters('users3', $users3);
+    $params->addParameters('nestedArray', $nestedArray);
 
     Response::renderTemplate("profile", $params->getParameters());
 } );
