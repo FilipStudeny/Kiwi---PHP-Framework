@@ -14,6 +14,8 @@ class Router{
     public static $viewsFolder = "";
     public static $middleware = [];
 
+    private static $COMPONENT_RENDER_DEPTH = 2;
+
     private static string $errorPageRoutes = "Errors";
 
     public static function setViewsFolder(string $viewsFolder): void{
@@ -120,6 +122,16 @@ class Router{
     public static function setErrorPageRoutes(string $errorPageRoutes): void
     {
         self::$errorPageRoutes = $errorPageRoutes;
+    }
+
+    public static function getComponentRenderDepth(): int
+    {
+        return self::$COMPONENT_RENDER_DEPTH;
+    }
+
+    public static function setComponentRenderDepth(int $COMPONENT_RENDER_DEPTH): void
+    {
+        self::$COMPONENT_RENDER_DEPTH = $COMPONENT_RENDER_DEPTH;
     }
 }
 

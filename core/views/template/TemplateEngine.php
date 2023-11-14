@@ -8,12 +8,14 @@ class TemplateEngine
 {
     protected string $templateDir;
     protected array $templateData;
+    private int $COMPONENT_RENDER_DEPTH;
 
     /**
      * @throws Exception
      */
     public function __construct(string $templateDir)
     {
+        $this->COMPONENT_RENDER_DEPTH = \Router::getComponentRenderDepth();
         if (!is_dir($templateDir)) {
             throw new Exception('Invalid template directory: ' . $templateDir);
         }
@@ -43,7 +45,7 @@ class TemplateEngine
             throw new Exception('Error reading template file: ' . $templatePath);
         }
 
-        $templateContent = $this->loadComponents($templateContent);
+        $templateContent = $this->loadComponents($templateContent, $this->COMPONENT_RENDER_DEPTH);
         $templateContent = $this->handleLoop($templateContent);
 
         foreach ($this->templateData as $key => $value) {
@@ -57,51 +59,49 @@ class TemplateEngine
     /**
      * @throws Exception
      */
-    protected function loadComponents(string $templateContent): string
+    protected function loadComponents(string $templateContent, int $renderDepth): string
     {
-        $pattern = '/@component\((.*?),\s*({[\s\S]*?})\)/';
-        preg_match_all($pattern, $templateContent, $matches, PREG_SET_ORDER);
+        if ($renderDepth > 0) {
+            $pattern = '/@component\((.*?),\s*({[\s\S]*?})\)/';
+            preg_match_all($pattern, $templateContent, $matches, PREG_SET_ORDER);
 
-        foreach ($matches as $match) {
-            $componentName = trim($match[1], " '");
-            $attributes = json_decode(trim($match[2]), true);
+            foreach ($matches as $match) {
+                $componentName = trim($match[1], " '");
+                $attributes = json_decode(trim($match[2]), true);
 
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new Exception('Invalid JSON in component attributes: ' . $match[2]);
-            }
-
-            // Check for missing attributes in the component registration
-            if (empty($attributes)) {
-                throw new Exception('No attributes specified for component ' . $componentName);
-            }
-
-            $componentPath = $this->templateDir . '/components/' . $componentName . '.php';
-            if (file_exists($componentPath)) {
-                ob_start();
-                include $componentPath;
-                $componentContent = ob_get_clean();
-
-                // Extract placeholder keys in the component content
-                $placeholderKeys = [];
-                preg_match_all('/{{(.*?)}}/', $componentContent, $placeholderKeys);
-
-                // Check for missing attributes in the component content
-                $missingAttributes = array_diff($placeholderKeys[1], array_keys($attributes));
-                if (!empty($missingAttributes)) {
-                    throw new Exception('Missing attributes in component content ' . $componentName . ': ' . implode(', ', $missingAttributes));
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new Exception('Invalid JSON in component attributes: ' . $match[2]);
                 }
 
-                // Replace the placeholders with the actual values
-                foreach ($attributes as $key => $value) {
-                    $componentContent = str_replace("{{" . $key . "}}", $value, $componentContent);
+                // Check for missing attributes in the component registration
+                if (empty($attributes)) {
+                    throw new Exception('No attributes specified for component ' . $componentName);
                 }
 
-                $templateContent = str_replace($match[0], $componentContent, $templateContent);
-            } else {
-                throw new Exception('Component ' . $componentName . ' not found!');
+                $componentPath = $this->templateDir . '/components/' . $componentName . '.php';
+                if (file_exists($componentPath)) {
+                    ob_start();
+                    include $componentPath;
+                    $componentContent = ob_get_clean();
+
+                    // Replace the placeholders with the actual values
+                    foreach ($attributes as $key => $value) {
+                        $componentContent = str_replace("{{" . $key . "}}", $value, $componentContent);
+                    }
+
+                    // Handle components within the loaded component content
+                    $componentContent = $this->loadComponents($componentContent, $renderDepth - 1);
+
+                    $templateContent = str_replace($match[0], $componentContent, $templateContent);
+                } else {
+                    throw new Exception('Component ' . $componentName . ' not found!');
+                }
             }
+        } else {
+            // Remove @component directives when renderDepth is 0
+            $templateContent = preg_replace('/@component\((.*?)\)/', '', $templateContent);
         }
-        $templateContent = $this->handleLoop($templateContent);
+
         return $templateContent;
     }
     /**
@@ -126,7 +126,7 @@ class TemplateEngine
 
             foreach ($this->templateData[$loopArrayName] as $loopItem) {
                 $iteratedContent = str_replace('{{' . $loopVariableName . '}}', $loopItem, $match[3]);
-                $loopContent .= $this->loadComponents($iteratedContent); // Process components inside the loop
+                $loopContent .= $this->loadComponents($iteratedContent, $this->COMPONENT_RENDER_DEPTH); // Process components inside the loop
             }
 
             $templateContent = str_replace($match[0], $loopContent, $templateContent);
