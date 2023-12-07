@@ -63,7 +63,7 @@ Router::get('/:username', function(Request $req, Response $res) {
     $nestedArray = [
         ['Alice', ['apple', 'orange']],
         ['Bob', ['banana', 'grapes']],
-        ['Charlie', ['kiwi', 'melon']]
+        ['Charlie', ['kiwis', 'melon']]
     ];
 
     $params = new ViewParameters();
