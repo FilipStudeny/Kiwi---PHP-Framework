@@ -19,6 +19,7 @@ class Response
     /**
      * RENDER 404 PAGE
      * @return void - Returns a 404 page
+     * @throws Exception
      */
     #[NoReturn] public static function notFound(): void
     {
@@ -31,6 +32,7 @@ class Response
      * RENDER MESSAGE IF WRONG HTTP METHOD WAS USED ON A ROUTE
      * @param string $method - HTTP Method
      * @return void - Returns a message if wrong HTTP method was used
+     * @throws Exception
      */
     #[NoReturn] public static function wrongMethod(string $method): void
     {
@@ -42,18 +44,6 @@ class Response
         exit();
     }
 
-    /**
-     * Render a view without components
-     * @param string $view - The view to render
-     * @param array $parameters - URL parameters to be used inside the view
-     * @param bool $isErrorRoute - Flag for error route
-     * @return void - Returns the rendered view
-     */
-    public static function render(string $view, array $parameters = [], bool $isErrorRoute = false): void
-    {
-        $newView = new View(self::getViewsFolder());
-        $newView->renderStatic($view, $parameters, $isErrorRoute);
-    }
 
     /**
      * Render a view with components
@@ -63,10 +53,11 @@ class Response
      * @return void - Returns the rendered view
      * @throws Exception
      */
-    public static function renderTemplate(string $view, array $parameters = [], bool $isErrorRoute = false): void
+    public static function render(string $view, array $parameters = [], bool $isErrorRoute = false): void
     {
-        $newView = new View(self::getViewsFolder());
-        $newView->render($view, $parameters, $isErrorRoute);
+        $viewPath = $isErrorRoute ? Router::getErrorViews() : Router::getViewsFolder();
+        $newView = new View($viewPath);
+        $newView->render($view, $parameters);
     }
 
     /**
@@ -76,6 +67,10 @@ class Response
     private static function getViewsFolder(): string
     {
         return Router::$viewsFolder;
+    }
+
+    private static function getViewErrors(): string{
+        return Router::getErrorViews();
     }
 
     /**
@@ -139,7 +134,7 @@ class Response
      * Set HTTP response status code
      * @param int $statusCode - HTTP status code
      */
-    private static function setStatusCode(int $statusCode): void
+    public static function setStatusCode(int $statusCode): void
     {
         http_response_code($statusCode);
     }

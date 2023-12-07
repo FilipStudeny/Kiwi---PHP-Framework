@@ -48,7 +48,6 @@ class TemplateEngine
         $templateContent = $this->loadComponents($templateContent, $this->COMPONENT_RENDER_DEPTH);
         $templateContent = $this->handleLoops($templateContent);
 
-        print_r($this->templateData);
 
         foreach ($this->templateData as $key => $value) {
             if (is_array($value)) {

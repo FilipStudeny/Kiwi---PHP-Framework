@@ -8,60 +8,27 @@ use Router;
 use ViewParameters;
 
 require_once './core/views/template/TemplateEngine.php';
-class View
+readonly class View
 {
-    private string $viewsFolder;
 
-    function __construct(string $viewsFolder)
-    {
-        $this->viewsFolder = $viewsFolder;
-    }
 
-    public function renderStatic(string $view, array $parameters = [], bool $isErrorRoute = false): void
-    {
-        $viewPath = $isErrorRoute ? Router::getErrorPageRoutes() . "/$view.php" : $this->viewsFolder . "/$view.php";
-
-        if (!file_exists($viewPath)) {
-            Response::notFound();
-        }
-
-        // Load the view content
-        ob_start();
-        extract($parameters);
-        include $viewPath;
-        $viewContent = ob_get_clean();
-
-        try {
-            http_response_code(200);
-            foreach ($parameters as $key => $value) {
-                $$key = $value;
-            }
-            include $viewPath;
-            exit();
-        } catch (Exception $e) {
-            echo "Error rendering view: " . $e->getMessage();
-            exit();
-        }
-    }
-
+    function __construct(private string $viewPath){}
 
     /**
      * @throws Exception
      */
-    public function render(string $view, array $parameters = [], bool $isErrorRoute = false): void
+    public function render(string $view, array $parameters = []): void
     {
-        $viewPath = $isErrorRoute ? Router::getErrorPageRoutes() . "/$view.php" : $this->viewsFolder . "/$view.php";
 
-        if (!file_exists($viewPath)) {
+        if (!file_exists($this->viewPath )) {
             Response::notFound();
         }
 
         // Load the view content
-        $templateEngine = new TemplateEngine($this->viewsFolder); // Assuming $this->viewsFolder is the directory path for your views
+        $templateEngine = new TemplateEngine($this->viewPath);
         foreach ($parameters as $key => $value) {
             $templateEngine->set($key, $value);
         }
-
 
         try {
             http_response_code(200);

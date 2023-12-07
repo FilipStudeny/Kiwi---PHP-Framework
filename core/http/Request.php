@@ -51,6 +51,29 @@ class Request
     }
 
     /**
+     * Get the POST data from a submitted form
+     */
+    public function getFormData(): ?array
+    {
+        if ($this->getHTTPMethod() === 'POST') {
+            return $_POST;
+        }
+
+        return null;
+    }
+
+    /**
+     * Get a specific value from the POST data
+     */
+    public function getFormValue(string $key): ?string
+    {
+        $formData = $this->getFormData();
+
+        return $formData[$key] ?? null;
+    }
+
+
+    /**
      * GET HTTP METHOD
      */
     public static function getHTTPMethod()
@@ -278,5 +301,29 @@ class Request
         }
 
         return $validated;
+    }
+
+    /**
+     * Validate and sanitize form POST data
+     */
+    public function validateFormData(array $keys): ?array
+    {
+        $formData = $this->getFormData();
+
+        if ($formData) {
+            $validatedData = [];
+            foreach ($keys as $key) {
+                $value = $formData[$key] ?? null;
+                if ($value !== null) {
+                    $validatedData[$key] = htmlspecialchars($value);
+                } else {
+                    // Field is missing, consider it as an error
+                    return null;
+                }
+            }
+            return $validatedData;
+        }
+
+        return null;
     }
 }

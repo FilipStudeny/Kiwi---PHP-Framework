@@ -1,1 +1,1 @@
-<h2>Route doesn't support @method request !;</h2>
+<h2>Route doesn't support {{method}} request !;</h2>

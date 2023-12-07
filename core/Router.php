@@ -15,8 +15,8 @@ class Router{
     public static array $middleware = [];
 
     private static int $COMPONENT_RENDER_DEPTH = 2;
-
-    private static string $errorPageRoutes = "Errors";
+    private static string $basePath = ''; // New static property for base route
+    private static string $errorViews = "Errors";
 
     public static function setViewsFolder(string $viewsFolder): void{
         self::$viewsFolder = $viewsFolder;
@@ -62,6 +62,9 @@ class Router{
         self::$middleware[] = $middleware;
     }
 
+    /**
+     * @throws Exception
+     */
     public static function resolve(): void {
         $urlPath = Request::getURIpath();
         $urlMethod = Request::getHTTPmethod();
@@ -73,14 +76,19 @@ class Router{
         foreach (self::$routes as $route) {
             $pattern = preg_replace('/:[a-zA-Z0-9]+/', '([a-zA-Z0-9-]+)', $route['route']);
             if (preg_match("#^$pattern$#", $urlPath, $matches)) {
-                if ($urlMethod != $route['method']) {
+                $routeFound = true;
+            }
+
+            if($routeFound){
+                if($urlMethod == $route['method']){
+                    $wrongMethod = false;
+                }else{
                     $wrongMethod = true;
-                    $routeFound = true;
-                    break;
                 }
+            }
 
+            if($routeFound && !$wrongMethod){
                 array_shift($matches);
-
                 $parameters = RouteParameterAssembler::assembleParameterTable($route, $matches);
 
                 if (is_callable($route['middleware'])) {
@@ -90,7 +98,6 @@ class Router{
                 }
 
                 $callback = $route['callback'];
-
                 if (is_callable($callback)) {
                     // If the middleware has modified data, pass it to the route
                     $requestToRoute = new Request($modifiedData ?? $parameters);
@@ -98,7 +105,7 @@ class Router{
                 } else if (is_string($callback)) {
                     Response::render($callback);
                 }
-                return;
+                break;
             }
         }
 
@@ -109,16 +116,21 @@ class Router{
         if ($routeFound && $wrongMethod) {
             Response::wrongMethod($urlMethod);
         }
+
     }
 
-    public static function getErrorPageRoutes(): string
+    public static function getErrorViews(): string
     {
-        return self::$errorPageRoutes;
+        return self::$errorViews;
     }
 
-    public static function setErrorPageRoutes(string $errorPageRoutes): void
+    public static function setErrorViews(string $errorViews): void
     {
-        self::$errorPageRoutes = $errorPageRoutes;
+        self::$errorViews = $errorViews;
+    }
+
+    public static function getViewsFolder(): string{
+        return self::$viewsFolder;
     }
 
     public static function getComponentRenderDepth(): int
@@ -129,6 +141,17 @@ class Router{
     public static function setComponentRenderDepth(int $COMPONENT_RENDER_DEPTH): void
     {
         self::$COMPONENT_RENDER_DEPTH = $COMPONENT_RENDER_DEPTH;
+    }
+
+    public static function getRoutes(): array {
+        $all_routes = [];
+        foreach (self::$routes as $route) {
+            $all_routes[] = [
+                'route' => $route['route'],
+                'method' => $route['method']
+            ];
+        }
+        return $all_routes;
     }
 }
 

@@ -9,8 +9,8 @@ require_once './core/Router.php';
 
 
 // Set the views folder
-Router::setViewsFolder('./views/');
-Router::setErrorPageRoutes('./views/Errors/');
+Router::setViewsFolder('./views');
+Router::setErrorViews('./views/Errors');
 Router::setComponentRenderDepth(1);
 
 function logEcho(Request $request, Next $next): Next{
@@ -27,14 +27,29 @@ Router::use('logEcho');
 // Define some routes
 Router::get('/', function(Request $req, Response $res) {
 
-    Response::renderTemplate('home');
+    Response::render('home');
 });
+
+
+Router::get('/form', 'form');
+Router::post('/form', function (Request $req, Response $res) {
+    echo $req->getFormValue('username');
+});
+
 
 Router::get('/debug', function(Request $req, Response $res) {
 
-    echo $req->getIPAddress();
-    echo $req->getClientIP();
-    echo $req->getRequestHost();
+    $routes = Router::getRoutes();
+    foreach ($routes as $route){
+        echo  $route['method'] . ":". $route['route'] . "<br>";
+    }
+
+    echo "<br>";
+    echo "<br>";
+
+    echo $req->getIPAddress() . "<br>";
+    echo $req->getClientIP() . "<br>";
+    echo $req->getRequestHost() . "<br>";
 });
 Router::post('/postsend', function(Request $req, Response $res) {
     echo "Site reached";
@@ -58,7 +73,7 @@ Router::get('/:username', function(Request $req, Response $res) {
     $params->addParameters('users3', $users3);
     $params->addParameters('nestedArray', $nestedArray);
 
-    Response::renderTemplate("profile", $params->getParameters());
+    Response::render("profile", $params->getParameters());
 } );
 
 Router::get('/user/:username', function(Request $req, Response $res){
