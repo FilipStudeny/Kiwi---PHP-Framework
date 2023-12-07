@@ -44,8 +44,8 @@ Router::get('/debug', function(Request $req, Response $res) {
         echo  $route['method'] . ":". $route['route'] . "<br>";
     }
 
-    echo "<br>";
-    echo "<br>";
+    echo " <br>";
+    echo " <br>";
 
     echo $req->getIPAddress() . "<br>";
     echo $req->getClientIP() . "<br>";
