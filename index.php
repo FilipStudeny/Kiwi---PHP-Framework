@@ -21,10 +21,15 @@ function logEcho(Request $request, Next $next): Next{
 }
 
 
+
 Router::use('logEcho');
 
 // Define some routes
-Router::get('/', "home", 'logEcho' );
+Router::get('/', function(Request $req, Response $res) {
+
+    Response::renderTemplate('home');
+});
+
 Router::get('/debug', function(Request $req, Response $res) {
 
     echo $req->getIPAddress();
