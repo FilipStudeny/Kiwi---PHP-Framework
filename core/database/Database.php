@@ -2,10 +2,12 @@
 
 namespace core\database;
 
+use core\database\types\Table;
 use Exception;
 use PDO;
 use PDOException;
 use PDOStatement;
+require_once './core/database/types/Table.php';
 
 class Database {
 
@@ -122,35 +124,41 @@ class Database {
         return $statement->rowCount() > 0;
     }
 
-    /**
-     * Create a new table with the provided schema.
-     *
-     * @param string $tableName Name of the table to be created.
-     * @param array $schema Associative array representing the table schema.
-     * @throws Exception
-     */
-    public function create_table(string $tableName, array $schema): void {
-        $sql = "CREATE TABLE IF NOT EXISTS $tableName (";
-        $columns = [];
 
-        foreach ($schema as $columnName => $columnDetails) {
-            $columnDefinition = "$columnName ";
+    public function create(Table $table): void {
+        $columns = $table->getColumns();
 
-            if (is_array($columnDetails)) {
-                $columnDefinition .= implode(' ', $columnDetails);
-            } else {
-                $columnDefinition .= $columnDetails;
-            }
-
-            $columns[] = $columnDefinition;
+        if (empty($columns)) {
+            throw new Exception('No columns defined for the table.');
         }
 
-        $sql .= implode(', ', $columns) . ")";
+        $sql = "CREATE TABLE IF NOT EXISTS {$table->getName()} (";
+
+        foreach ($columns as $columnName => $columnDefinition) {
+            $sql .= "{$columnName} " . implode(' ', $columnDefinition) . ",";
+        }
+
+        $sql = rtrim($sql, ',') . ")";
 
         try {
             $this->connection->exec($sql);
         } catch (PDOException $e) {
             throw new Exception('Table creation failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Drop a table from the database.
+     *
+     * @throws Exception
+     */
+    public function drop(string $tableName): void {
+        $sql = "DROP TABLE IF EXISTS {$tableName}";
+
+        try {
+            $this->connection->exec($sql);
+        } catch (PDOException $e) {
+            throw new Exception('Table deletion failed: ' . $e->getMessage());
         }
     }
 

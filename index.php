@@ -1,6 +1,7 @@
 <?php
 // Import the required classes
 use core\database\types\DBTypes;
+use core\database\types\Table;
 use core\http\Next;
 use core\http\Request;
 use core\http\Response;
@@ -8,7 +9,7 @@ use core\http\Response;
 require_once './core/Router.php';
 require_once './core/database/Database.php';
 require_once './core/database/types/DBTypes.php';
-
+require_once './core/database/types/Table.php';
 
 // Set the views folder
 Router::setViewsFolder('./views');
@@ -37,24 +38,47 @@ Router::get('/db', function(Request $req, Response $res) {
     $database = new \core\database\Database('localhost', 'root', '', 'framework_test');
 
     $tableExists = $database->tableExists('users');
+
     if($tableExists){
         echo "Table exists";
 
+        $users = $database->table('users')->where('username', 'lars')->get();
+        foreach ($users as $user){
+            print_r($user);
+        }
+
     }else {
         echo "No table";
-        echo DBTypes::INT;
-        $schema = [
+
+
+        // Create a Table object for 'users' table
+        $table = new Table('users', [
             'id' => [DBTypes::INT, DBTypes::PRIMARY_KEY, DBTypes::AUTOINCREMENT],
             'username' => [DBTypes::VARCHAR(255), DBTypes::NOT_NULL],
-            'created_at' => [DBTypes::DATETIME]
-            // Define other columns here as needed
-        ];
+            'created_at' => [DBTypes::DATETIME],
+        ]);
+/*
+// Add columns to the 'users' table
+        $table->addColumn('id', [DBTypes::INT, DBTypes::PRIMARY_KEY, DBTypes::AUTOINCREMENT])
+            ->addColumn('username', [DBTypes::VARCHAR(50), DBTypes::NOT_NULL])
+            ->addColumn('email', [DBTypes::VARCHAR(100), DBTypes::NOT_NULL, DBTypes::UNIQUE]);
+*/
 
-        $database->create_table('users', $schema);
+        $database->create($table);
 
     }
+});
 
+Router::post('/db/add/:username', function(Request $req, Response $res) {
+    $database = new \core\database\Database('localhost', 'root', '', 'framework_test');
 
+    $userData = [
+        'username' => $req->getParameter('username'),
+        'created_at' => date('Y-m-d H:i:s') // Assuming MySQL DATETIME format
+    ];
+
+    $database->table('users')->insert($userData);
+    Response::setStatusCode(201);
 });
 
 Router::get('/:username', function(Request $req, Response $res) {
