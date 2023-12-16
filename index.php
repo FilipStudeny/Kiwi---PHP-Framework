@@ -1,10 +1,13 @@
 <?php
 // Import the required classes
+use core\database\types\DBTypes;
 use core\http\Next;
 use core\http\Request;
 use core\http\Response;
 
 require_once './core/Router.php';
+require_once './core/database/Database.php';
+require_once './core/database/types/DBTypes.php';
 
 
 // Set the views folder
@@ -27,6 +30,31 @@ Router::use('logEcho');
 Router::get('/', function(Request $req, Response $res) {
 
     Response::render('home');
+});
+
+Router::get('/db', function(Request $req, Response $res) {
+
+    $database = new \core\database\Database('localhost', 'root', '', 'framework_test');
+
+    $tableExists = $database->tableExists('users');
+    if($tableExists){
+        echo "Table exists";
+
+    }else {
+        echo "No table";
+        echo DBTypes::INT;
+        $schema = [
+            'id' => [DBTypes::INT, DBTypes::PRIMARY_KEY, DBTypes::AUTOINCREMENT],
+            'username' => [DBTypes::VARCHAR(255), DBTypes::NOT_NULL],
+            'created_at' => [DBTypes::DATETIME]
+            // Define other columns here as needed
+        ];
+
+        $database->create_table('users', $schema);
+
+    }
+
+
 });
 
 Router::get('/:username', function(Request $req, Response $res) {
