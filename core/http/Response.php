@@ -6,7 +6,6 @@ use core\views\View;
 use Exception;
 use JetBrains\PhpStorm\NoReturn;
 use Router;
-use ViewParameters;
 
 require_once './core/views/View.php';
 
@@ -16,48 +15,57 @@ class Response
     public const HTTP_NOT_FOUND = 404;
     public const HTTP_METHOD_NOT_ALLOWED = 405;
 
+
     /**
-     * RENDER 404 PAGE
-     * @return void - Returns a 404 page
+     * Render a 404 page.
      * @throws Exception
      */
     #[NoReturn] public static function notFound(): void
     {
         self::setStatusCode(self::HTTP_NOT_FOUND);
-        self::render('404', (array)null, true);
+        self::render('404', true);
         exit();
     }
 
+
     /**
-     * RENDER MESSAGE IF WRONG HTTP METHOD WAS USED ON A ROUTE
+     * Render a message if an incorrect HTTP method was used on a route.
      * @param string $method - HTTP Method
-     * @return void - Returns a message if wrong HTTP method was used
      * @throws Exception
      */
     #[NoReturn] public static function wrongMethod(string $method): void
     {
         self::setStatusCode(self::HTTP_METHOD_NOT_ALLOWED);
         header("Allow: GET, POST, PUT, DELETE");
-        $params = new ViewParameters();
-        $params->addParameters('method', $method);
-        self::render('405', $params->getParameters(), true);
+        $view = new View('405');
+        $view->add('method', $method);
+        self::render($view, true);
         exit();
     }
 
 
     /**
-     * Render a view with components
-     * @param string $view - The view to render
-     * @param array $parameters - URL parameters to be used inside the view
+     * Render a view.
+     * @param string|View $view - View to render
      * @param bool $isErrorRoute - Flag for error route
      * @return void - Returns the rendered view
      * @throws Exception
      */
-    public static function render(string $view, array $parameters = [], bool $isErrorRoute = false): void
+    public static function render(string|View $view, bool $isErrorRoute = false): void
     {
         $viewPath = $isErrorRoute ? Router::getErrorViews() : Router::getViewsFolder();
-        $newView = new View($viewPath);
-        $newView->render($view, $parameters);
+
+        if (!file_exists($viewPath )) {
+            Response::notFound();
+        }else{
+            if(is_string($view)){
+                $newView = new View($view);
+                $newView->render($viewPath);
+            }else{
+                $view->render($viewPath);
+            }
+        }
+
     }
 
     /**
@@ -115,6 +123,7 @@ class Response
      * @param string $filePath - Path to file to send
      * @param string $fileName - Name of file to send (optional)
      * @return void - Sends file as response
+     * @throws Exception
      */
     #[NoReturn] public static function file(string $filePath, string $fileName = ''): void
     {
@@ -149,4 +158,4 @@ class Response
     }
 }
 
-?>
+

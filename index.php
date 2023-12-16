@@ -4,7 +4,6 @@ use core\http\Next;
 use core\http\Request;
 use core\http\Response;
 
-require_once './core/ViewParameters.php';
 require_once './core/Router.php';
 
 
@@ -30,7 +29,30 @@ Router::get('/', function(Request $req, Response $res) {
     Response::render('home');
 });
 
+Router::get('/:username', function(Request $req, Response $res) {
 
+    $name = $req->getParameter("username");
+
+    $users = ['admin', 'pepa', 'bogo'];
+    $users3 = [['admin', [0,"a"]], ['pepa', [1, "b"]], ['bogo', [2, "c"]], ['Borg', [3, "d"]]];
+    $nestedArray = [
+        ['Alice', ['apple', 'orange']],
+        ['Bob', ['banana', 'grapes']],
+        ['Charlie', ['kiwis', 'melon']]
+    ];
+
+
+    $view = new \core\views\View('profile');
+    $view->add('username', $name);
+    $view->add('username', $name);
+    $view->add('page', 1);
+    $view->add('users', $users);
+    $view->add('users3', $users3);
+    $view->add('nestedArray', $nestedArray);
+    Response::render($view);
+} );
+
+/*
 Router::get('/form', 'form');
 Router::post('/form', function (Request $req, Response $res) {
     echo $req->getFormValue('username');
@@ -99,7 +121,7 @@ Router::get('/:username/:id/post/:id', function(Request $req, Response $res) {
 });
 
 
-
+*/
 // Resolve route and send response
 Router::resolve();
 

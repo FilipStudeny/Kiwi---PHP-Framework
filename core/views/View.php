@@ -8,36 +8,37 @@ use Router;
 use ViewParameters;
 
 require_once './core/views/template/TemplateEngine.php';
-readonly class View
+class View
 {
-
-
-    function __construct(private string $viewPath){}
+    function __construct(private readonly string $view, private array $parameters = []){}
 
     /**
      * @throws Exception
      */
-    public function render(string $view, array $parameters = []): void
+    public function render(string $viewPath): void
     {
 
-        if (!file_exists($this->viewPath )) {
-            Response::notFound();
-        }
-
         // Load the view content
-        $templateEngine = new TemplateEngine($this->viewPath);
-        foreach ($parameters as $key => $value) {
+        $templateEngine = new TemplateEngine($viewPath);
+        foreach ($this->parameters as $key => $value) {
             $templateEngine->set($key, $value);
         }
 
         try {
             http_response_code(200);
-            $templateEngine->render("/$view.php");
+            $templateEngine->render("/$this->view.php");
             exit();
         } catch (Exception $e) {
             echo "Error rendering view: " . $e->getMessage();
             exit();
         }
+    }
+
+    public function add(string $name, $value): void{
+        $this->parameters[$name] = $value;
+    }
+    public function getParameters(): array{
+        return $this->parameters;
     }
 
 }

@@ -39,7 +39,6 @@ Router::setErrorPageRoutes('./views/Errors/');
     use core\http\Request;
     use core\http\Response;
     
-    require_once './core/ViewParameters.php';
     require_once './core/Router.php';
 
     RENDER PAGE
