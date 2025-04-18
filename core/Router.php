@@ -4,18 +4,22 @@ use core\http\Next;
 use core\http\Request;
 use core\http\Response;
 
-require_once './core/autoload.php';
 class Router {
     private static array $routes = [];
     private static array $middleware = [];        // global middleware
     private static array $namedMiddleware = [];   // named middleware registry
     private static array $groupStack = [];
+    private static array $bindings = []; // interface bindings
 
     private static string $viewsFolder = '';
     private static string $errorViews = 'Errors';
     private static int $COMPONENT_RENDER_DEPTH = 2;
 
     // === CONFIGURATION ===
+    public static function bind(string $abstract, string $concrete): void {
+        self::$bindings[$abstract] = $concrete;
+    }
+
     public static function setViewsFolder(string $folder): void {
         self::$viewsFolder = $folder;
     }
@@ -209,8 +213,7 @@ class Router {
             throw new \Exception("Controller class '$controllerClass' not found.");
         }
 
-        /** @var \core\http\RouterController $controller */
-        $controller = new $controllerClass($prefix, $middleware);
+        $controller = self::autoResolveController($controllerClass, $prefix, $middleware);
 
         if (!method_exists($controller, 'registerController')) {
             throw new \Exception("Controller '$controllerClass' must implement registerController().");
@@ -218,5 +221,54 @@ class Router {
 
         $controller->registerController();
     }
+
+    private static function autoResolveController(string $controllerClass, string $prefix, array $middleware): object {
+        $reflection = new \ReflectionClass($controllerClass);
+        $constructor = $reflection->getConstructor();
+
+        if (!$constructor) {
+            return new $controllerClass();
+        }
+
+        $args = [];
+
+        foreach ($constructor->getParameters() as $param) {
+            $type = $param->getType();
+
+            // If it's the $prefix string param
+            if ($param->getName() === 'prefix' && $type?->getName() === 'string') {
+                $args[] = $prefix;
+                continue;
+            }
+
+            // If it's the $middleware array param
+            if ($param->getName() === 'middleware' && $type?->getName() === 'array') {
+                $args[] = $middleware;
+                continue;
+            }
+
+            // Autowire class dependencies
+            if ($type && !$type->isBuiltin()) {
+                $dependencyClass = $type->getName();
+                if (interface_exists($dependencyClass)) {
+                    $concrete = self::$bindings[$dependencyClass] ?? null;
+                    if (!$concrete || !class_exists($concrete)) {
+                        throw new \Exception("No implementation found for interface '$dependencyClass'");
+                    }
+                    $args[] = new $concrete();
+                } elseif (class_exists($dependencyClass)) {
+                    $args[] = new $dependencyClass();
+                } else {
+                    throw new \Exception("Cannot resolve dependency '$dependencyClass' for controller '$controllerClass'");
+                }
+
+            } else {
+                throw new \Exception("Cannot resolve parameter '{$param->getName()}' in '$controllerClass' constructor");
+            }
+        }
+
+        return $reflection->newInstanceArgs($args);
+    }
+
 
 }

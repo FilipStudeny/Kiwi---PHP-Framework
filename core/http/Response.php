@@ -68,15 +68,6 @@ class Response
 
     }
 
-    /**
-     * GET VIEWS DIRECTORY FROM ROUTER
-     * @return string $viewsFolder - Path to Views directory, where views are stored
-     */
-    private static function getViewsFolder(): string
-    {
-        return Router::$viewsFolder;
-    }
-
     private static function getViewErrors(): string{
         return Router::getErrorViews();
     }

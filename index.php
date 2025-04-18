@@ -1,16 +1,21 @@
 <?php
 
 use app\controllers\AuthController;
+use app\controllers\ControlController;
 use core\database\Database;
 use core\database\types\DBTypes;
 use core\database\types\Table;
 use core\http\Next;
 use core\http\Request;
 use core\http\Response;
+use app\EchoerService;
+use app\IEchoer;
 
 require_once './core/autoload.php';
 require_once './core/Router.php';
 require_once './controllers/AuthController.php';
+require_once './controllers/ControlController.php';
+
 
 // === CONFIGURATION ===
 Router::setViewsFolder('./views');
@@ -34,7 +39,9 @@ Router::addMiddleware('logger', function(Request $req, Next $next) {
 });
 
 // === CONTROLLERS ===
+Router::bind(IEchoer::class, EchoerService::class);
 Router::addController('/auth', AuthController::class);
+Router::addController('/controll', ControlController::class);
 
 // === ROUTES ===
 Router::get('/', fn(Request $req, Response $res) => Response::render('home'));
