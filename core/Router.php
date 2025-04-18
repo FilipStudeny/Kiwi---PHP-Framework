@@ -4,10 +4,7 @@ use core\http\Next;
 use core\http\Request;
 use core\http\Response;
 
-require_once './core/http/Next.php';
-require_once './core/http/Request.php';
-require_once './core/http/Response.php';
-
+require_once './core/autoload.php';
 class Router {
     private static array $routes = [];
     private static array $middleware = [];        // global middleware
@@ -44,8 +41,19 @@ class Router {
     }
 
     public static function getRoutes(): array {
-        return array_map(fn($r) => ['route' => $r['route'], 'method' => $r['method']], self::$routes);
+        return array_map(function ($r) {
+            $callback = is_array($r['callback']) && is_object($r['callback'][0])
+                ? get_class($r['callback'][0]) . '::' . $r['callback'][1]
+                : (is_string($r['callback']) ? $r['callback'] : 'Closure');
+
+            return [
+                'route' => $r['route'],
+                'method' => $r['method'],
+                'callback' => $callback
+            ];
+        }, self::$routes);
     }
+
 
     // === GLOBAL MIDDLEWARE ===
     public static function use(callable $middleware): void {
@@ -99,6 +107,10 @@ class Router {
 
     public static function delete(string $route, callable|string $callback, callable|string|array|null $middleware = null): void {
         self::registerRoute('DELETE', $route, $callback, $middleware);
+    }
+
+    public static function map(string $method, string $route, callable|string $callback, callable|string|array|null $middleware = null): void {
+        self::registerRoute(strtoupper($method), $route, $callback, $middleware);
     }
 
     private static function registerRoute(string $method, string $route, callable|string $callback, callable|string|array|null $middleware): void {
@@ -191,4 +203,20 @@ class Router {
         $clean = '/' . trim($path, '/');
         return $clean === '/' ? $clean : rtrim($clean, '/');
     }
+
+    public static function addController(string $prefix, string $controllerClass, array $middleware = []): void {
+        if (!class_exists($controllerClass)) {
+            throw new \Exception("Controller class '$controllerClass' not found.");
+        }
+
+        /** @var \core\http\RouterController $controller */
+        $controller = new $controllerClass($prefix, $middleware);
+
+        if (!method_exists($controller, 'registerController')) {
+            throw new \Exception("Controller '$controllerClass' must implement registerController().");
+        }
+
+        $controller->registerController();
+    }
+
 }

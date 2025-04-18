@@ -1,21 +1,23 @@
 <?php
-// Import the required classes
+
+use app\controllers\AuthController;
+use core\database\Database;
 use core\database\types\DBTypes;
 use core\database\types\Table;
 use core\http\Next;
 use core\http\Request;
 use core\http\Response;
 
+require_once './core/autoload.php';
 require_once './core/Router.php';
-require_once './core/database/Database.php';
-require_once './core/database/types/DBTypes.php';
-require_once './core/database/types/Table.php';
+require_once './controllers/AuthController.php';
 
-// Set the views folder
+// === CONFIGURATION ===
 Router::setViewsFolder('./views');
 Router::setErrorViews('./views/Errors');
 Router::setComponentRenderDepth(1);
 
+// === GLOBAL MIDDLEWARE ===
 Router::addMiddleware('auth', function(Request $req, Next $next) {
     $token = $req->getHeader('Authorization');
     if ($token !== 'Bearer secret123') {
@@ -31,92 +33,73 @@ Router::addMiddleware('logger', function(Request $req, Next $next) {
     return $next;
 });
 
+// === CONTROLLERS ===
+Router::addController('/auth', AuthController::class);
 
-// Define some routes
-Router::get('/', function(Request $req, Response $res) {
-
-    Response::render('home');
-});
+// === ROUTES ===
+Router::get('/', fn(Request $req, Response $res) => Response::render('home'));
 
 Router::get('/db', function(Request $req, Response $res) {
+    $db = new Database('localhost', 'root', '', 'framework_test');
 
-    $database = new \core\database\Database('localhost', 'root', '', 'framework_test');
-
-    $tableExists = $database->tableExists('users');
-
-    if($tableExists){
-        echo "Table exists";
-
-        $users = $database->table('users')->where('username', 'lars')->get();
-        foreach ($users as $user){
+    if ($db->tableExists('users')) {
+        echo "Table exists<br>";
+        foreach ($db->table('users')->where('username', 'lars')->get() as $user) {
             print_r($user);
         }
-
-    }else {
-        echo "No table";
-
-
-        // Create a Table object for 'users' table
+    } else {
+        echo "No table<br>";
         $table = new Table('users', [
-            'id' => [DBTypes::INT, DBTypes::PRIMARY_KEY, DBTypes::AUTOINCREMENT],
-            'username' => [DBTypes::VARCHAR(255), DBTypes::NOT_NULL],
+            'id'         => [DBTypes::INT, DBTypes::PRIMARY_KEY, DBTypes::AUTOINCREMENT],
+            'username'   => [DBTypes::VARCHAR(255), DBTypes::NOT_NULL],
             'created_at' => [DBTypes::DATETIME],
         ]);
-/*
-// Add columns to the 'users' table
-        $table->addColumn('id', [DBTypes::INT, DBTypes::PRIMARY_KEY, DBTypes::AUTOINCREMENT])
-            ->addColumn('username', [DBTypes::VARCHAR(50), DBTypes::NOT_NULL])
-            ->addColumn('email', [DBTypes::VARCHAR(100), DBTypes::NOT_NULL, DBTypes::UNIQUE]);
-*/
-
-        $database->create($table);
-
+        $db->create($table);
     }
 });
 
 Router::post('/db/add/:username', function(Request $req, Response $res) {
-    $database = new \core\database\Database('localhost', 'root', '', 'framework_test');
+    $db = new Database('localhost', 'root', '', 'framework_test');
 
-    $userData = [
-        'username' => $req->getParameter('username'),
-        'created_at' => date('Y-m-d H:i:s') // Assuming MySQL DATETIME format
-    ];
+    $db->table('users')->insert([
+        'username'   => $req->getParameter('username'),
+        'created_at' => date('Y-m-d H:i:s'),
+    ]);
 
-    $database->table('users')->insert($userData);
     Response::setStatusCode(201);
 });
 
-
-
+// === PARAMETERIZED ROUTE ===
 Router::get('/:username', function(Request $req, Response $res) {
-
     $name = $req->getParameter("username");
-
-    $users = ['admin', 'pepa', 'bogo'];
-    $users3 = [['admin', [0,"a"]], ['pepa', [1, "b"]], ['bogo', [2, "c"]], ['Borg', [3, "d"]]];
-    $nestedArray = [
-        ['Alice', ['apple', 'orange']],
-        ['Bob', ['banana', 'grapes']],
-        ['Charlie', ['kiwis', 'melon']]
-    ];
-
 
     $view = new \core\views\View('profile');
     $view->add('username', $name);
-    $view->add('username', $name);
     $view->add('page', 1);
-    $view->add('users', $users);
-    $view->add('users3', $users3);
-    $view->add('nestedArray', $nestedArray);
-    Response::render($view);
-} );
+    $view->add('users', ['admin', 'pepa', 'bogo']);
+    $view->add('users3', [
+        ['admin', [0, "a"]],
+        ['pepa', [1, "b"]],
+        ['bogo', [2, "c"]],
+        ['Borg', [3, "d"]],
+    ]);
+    $view->add('nestedArray', [
+        ['Alice', ['apple', 'orange']],
+        ['Bob', ['banana', 'grapes']],
+        ['Charlie', ['kiwis', 'melon']],
+    ]);
 
+    Response::render($view);
+});
+
+// === DEBUG ROUTE ===
 Router::get('/debug/routes', function(Request $req, Response $res) {
     echo "<pre>";
     print_r(Router::getRoutes());
     echo "</pre>";
 });
 
+// === ADMIN ROUTE GROUP ===
 Router::group(['prefix' => '/admin'], function () {
     Router::get('/dashboard', function(Request $req, Response $res) {
         echo "Admin dashboard";
@@ -127,15 +110,5 @@ Router::group(['prefix' => '/admin'], function () {
     });
 });
 
-Router::get('/secure', function(Request $req, Response $res) {
-    echo "You are authorized!";
-}, ['auth', 'logger']);
-
-Router::get('/public', function(Request $req, Response $res) {
-    echo "Public endpoint";
-});
-
-
-// Resolve route and send response
+// === RESOLVE ===
 Router::resolve();
-
