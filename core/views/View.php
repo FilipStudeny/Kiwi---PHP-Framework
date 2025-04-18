@@ -1,11 +1,8 @@
 <?php
 
 namespace core\views;
-use core\http\Response;
 use core\views\Template\TemplateEngine;
 use Exception;
-use Router;
-use ViewParameters;
 
 require_once './core/views/template/TemplateEngine.php';
 class View
@@ -25,7 +22,6 @@ class View
         }
 
         try {
-            http_response_code(200);
             $templateEngine->render("/$this->view.php");
             exit();
         } catch (Exception $e) {

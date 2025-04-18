@@ -39,15 +39,15 @@ final class DBTypes {
     public const RESTRICT = 'RESTRICT';
     public const NO_ACTION = 'NO ACTION';
 
-    public static function VARCHAR(int $length = null): string {
+    public static function VARCHAR(?int $length = null): string {
         return self::VARCHAR . ($length !== null ? "($length)" : '');
     }
 
-    public static function CHAR(int $length = null): string {
+    public static function CHAR(?int $length = null): string {
         return self::CHAR . ($length !== null ? "($length)" : '');
     }
 
-    public static function DECIMAL(int $precision = null, int $scale = null): string {
+    public static function DECIMAL(?int $precision = null, ?int $scale = null): string {
         if ($precision !== null && $scale !== null) {
             return self::DECIMAL . "($precision, $scale)";
         }

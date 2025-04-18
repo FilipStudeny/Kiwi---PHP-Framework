@@ -16,10 +16,9 @@ Router::setViewsFolder('./views');
 Router::setErrorViews('./views/Errors');
 Router::setComponentRenderDepth(1);
 
-function logEcho(Request $request, Next $next): Next{
-    $username = $request->getParameter("username");
-    $modifiedUsername = strtoupper($username);
-    $next->setModifiedData(['username' => $modifiedUsername]);
+function logEcho(Request $request, Next $next): Next {
+    $username = strtoupper((string) $request->getParameter("username"));
+    $next->setModifiedData(['username' => $username]);
     return $next;
 }
 
@@ -104,77 +103,41 @@ Router::get('/:username', function(Request $req, Response $res) {
     Response::render($view);
 } );
 
-/*
-Router::get('/form', 'form');
-Router::post('/form', function (Request $req, Response $res) {
-    echo $req->getFormValue('username');
+
+
+Router::get('/debug/routes', function(Request $req, Response $res) {
+    echo "<pre>";
+    print_r(Router::getRoutes());
+    echo "</pre>";
+});
+
+Router::group(['prefix' => '/admin'], function () {
+    Router::get('/dashboard', function(Request $req, Response $res) {
+        echo "Admin dashboard";
+    });
+
+    Router::get('/users/:id', function(Request $req, Response $res) {
+        echo "User ID: " . $req->getParameter('id');
+    });
 });
 
 
-Router::get('/debug', function(Request $req, Response $res) {
-
-    $routes = Router::getRoutes();
-    foreach ($routes as $route){
-        echo  $route['method'] . ":". $route['route'] . "<br>";
+Router::group(['prefix' => '/admin', 'middleware' => function(Request $req, Next $next) {
+    if ($req->getParameter('role') !== 'admin') {
+        die('Access denied');
     }
+    return $next;
+}], function () {
+    Router::get('/dashboard', function(Request $req, Response $res) {
+        echo "Admin dashboard";
+    });
 
-    echo " <br>";
-    echo " <br>";
-
-    echo $req->getIPAddress() . "<br>";
-    echo $req->getClientIP() . "<br>";
-    echo $req->getRequestHost() . "<br>";
-});
-Router::post('/postsend', function(Request $req, Response $res) {
-    echo "Site reached";
-});
-
-Router::get('/:username', function(Request $req, Response $res) {
-
-    $name = $req->getParameter("username");
-    $users = ['admin', 'pepa', 'bogo'];
-    $users3 = [['admin', [0,"a"]], ['pepa', [1, "b"]], ['bogo', [2, "c"]], ['Borg', [3, "d"]]];
-    $nestedArray = [
-        ['Alice', ['apple', 'orange']],
-        ['Bob', ['banana', 'grapes']],
-        ['Charlie', ['kiwis', 'melon']]
-    ];
-
-    $params = new ViewParameters();
-    $params->addParameters('username', $name);
-    $params->addParameters('page', 1);
-    $params->addParameters('users', $users);
-    $params->addParameters('users3', $users3);
-    $params->addParameters('nestedArray', $nestedArray);
-
-    Response::render("profile", $params->getParameters());
-} );
-
-Router::get('/user/:username', function(Request $req, Response $res){
-    $username = $req->getParameter("username");
-
-    echo "Hello: $username !";
-}, 'logEcho' );
-
-Router::get('/:username/:id/:id', function(Request $req, Response $res) {
-    $params = $req->getParams();
-
-    print_r($params);
-    echo "Welcome ! ";
-}, 'logEcho');
-
-Router::get('/:username/:id/post/:id', function(Request $req, Response $res) {
-    $params = $req->getParams();
-    $username = $params["username"];
-    $id = $params["id"];
-    $post = $params["id_2"];
-
-    echo "Welcome $username: $id = $post! ";
+    Router::get('/users/:id', function(Request $req, Response $res) {
+        echo "User ID: " . $req->getParameter('id');
+    });
 });
 
 
-*/
 // Resolve route and send response
 Router::resolve();
 
-?>

@@ -5,7 +5,7 @@ class Next
 {
     private array $modifiedData;
 
-    public function __construct(array $data = null)
+    public function __construct(?array $data = null)
     {
         $this->modifiedData = $data;
     }

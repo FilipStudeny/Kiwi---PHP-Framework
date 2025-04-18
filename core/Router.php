@@ -8,190 +8,156 @@ require_once './core/http/Next.php';
 require_once './core/http/Request.php';
 require_once './core/http/Response.php';
 
+class Router {
+    private static array $routes = [];
+    private static array $middleware = [];
+    private static array $groupStack = [];
 
-class Router{
-    public static array $routes = [];
-    public static string $viewsFolder = "";
-    public static array $middleware = [];
-
+    private static string $viewsFolder = '';
+    private static string $errorViews = 'Errors';
     private static int $COMPONENT_RENDER_DEPTH = 2;
-    private static string $basePath = ''; // New static property for base route
-    private static string $errorViews = "Errors";
 
-    public static function setViewsFolder(string $viewsFolder): void{
-        self::$viewsFolder = $viewsFolder;
+    // === CONFIGURATION ===
+    public static function setViewsFolder(string $folder): void {
+        self::$viewsFolder = $folder;
     }
 
-    public static function get(string $route, $callback, callable $middleware=null): void{
-        self::$routes[] = [
-            'route' => $route,
-            'callback' => $callback,
-            'method' => 'GET',
-            'middleware' => $middleware
-        ];
+    public static function setErrorViews(string $folder): void {
+        self::$errorViews = $folder;
     }
 
-    public static function post(string $route, $callback, callable $middleware=null): void{
-        self::$routes[] = [
-            'route' => $route,
-            'callback' => $callback,
-            'method' => 'POST',
-            'middleware' => $middleware
-        ];
+    public static function setComponentRenderDepth(int $depth): void {
+        self::$COMPONENT_RENDER_DEPTH = $depth;
     }
 
-    public static function delete(string $route, $callback, callable $middleware=null): void{
-        self::$routes[] = [
-            'route' => $route,
-            'callback' => $callback,
-            'method' => 'DELETE',
-            'middleware' => $middleware
-        ];
+    public static function getViewsFolder(): string {
+        return self::$viewsFolder;
     }
 
-    public static function put(string $route, $callback, callable $middleware=null): void{
-        self::$routes[] = [
-            'route' => $route,
-            'callback' => $callback,
-            'method' => 'PUT',
-            'middleware' => $middleware
-        ];
+    public static function getErrorViews(): string {
+        return self::$errorViews;
     }
 
+    public static function getComponentRenderDepth(): int {
+        return self::$COMPONENT_RENDER_DEPTH;
+    }
+
+    public static function getRoutes(): array {
+        return array_map(fn($r) => ['route' => $r['route'], 'method' => $r['method']], self::$routes);
+    }
+
+    // === MIDDLEWARE ===
     public static function use(callable $middleware): void {
         self::$middleware[] = $middleware;
     }
 
-    /**
-     * @throws Exception
-     */
+    // === ROUTE GROUPING ===
+    public static function group(array $options, callable $callback): void {
+        self::$groupStack[] = $options;
+        $callback();
+        array_pop(self::$groupStack);
+    }
+
+    // === HTTP METHODS ===
+    public static function get(string $route, callable|string $callback, ?callable $middleware = null): void {
+        self::registerRoute('GET', $route, $callback, $middleware);
+    }
+
+    public static function post(string $route, callable|string $callback, ?callable $middleware = null): void {
+        self::registerRoute('POST', $route, $callback, $middleware);
+    }
+
+    public static function put(string $route, callable|string $callback, ?callable $middleware = null): void {
+        self::registerRoute('PUT', $route, $callback, $middleware);
+    }
+
+    public static function delete(string $route, callable|string $callback, ?callable $middleware = null): void {
+        self::registerRoute('DELETE', $route, $callback, $middleware);
+    }
+
+    private static function registerRoute(string $method, string $route, callable|string $callback, ?callable $middleware): void {
+        $prefix = '';
+        $groupMiddleware = [];
+
+        foreach (self::$groupStack as $group) {
+            $prefix .= rtrim($group['prefix'] ?? '', '/');
+            if (isset($group['middleware'])) {
+                $groupMiddleware[] = $group['middleware'];
+            }
+        }
+
+        // Normalize full route
+        $normalized = rtrim($prefix . '/' . ltrim($route, '/'), '/');
+        $fullRoute = $normalized === '' ? '/' : $normalized;
+
+        self::$routes[] = [
+            'method' => $method,
+            'route' => $fullRoute,
+            'callback' => $callback,
+            'middleware' => $middleware,
+            'groupMiddleware' => $groupMiddleware
+        ];
+    }
+
+    // === ROUTE RESOLUTION ===
     public static function resolve(): void {
-        $urlPath = Request::getURIpath();
-        $urlMethod = Request::getHTTPmethod();
-
-        $wrongMethod = false;
-        $routeFound = false;
-        $modifiedData = null;
+        $method = Request::getHTTPmethod();
+        $path = self::normalizePath(Request::getURIpath());
 
         foreach (self::$routes as $route) {
-            $pattern = preg_replace('/:[a-zA-Z0-9]+/', '([a-zA-Z0-9-]+)', $route['route']);
-            if (preg_match("#^$pattern$#", $urlPath, $matches)) {
-                $routeFound = true;
+            $routePath = self::normalizePath($route['route']);
+            $params = self::matchRoute($routePath, $path);
+
+            if ($params === null || $method !== $route['method']) {
+                continue;
             }
 
-            if($routeFound){
-                if($urlMethod == $route['method']){
-                    $wrongMethod = false;
-                }else{
-                    $wrongMethod = true;
-                }
+            // Run middleware
+            $params = self::runMiddleware(self::$middleware, $params);
+            $params = self::runMiddleware($route['groupMiddleware'], $params);
+            if (is_callable($route['middleware'])) {
+                $params = self::runMiddleware([$route['middleware']], $params);
             }
 
-            if($routeFound && !$wrongMethod){
-                array_shift($matches);
-                $parameters = RouteParameterAssembler::assembleParameterTable($route, $matches);
-
-                if (is_callable($route['middleware'])) {
-                    $next = new Next($parameters);
-                    $next = call_user_func($route['middleware'], new Request($parameters), $next); // Update $next with the modified data
-                    $modifiedData = $next->getModifiedData(); // Retrieve the modified data from $next
-                }
-
-                $callback = $route['callback'];
-                if (is_callable($callback)) {
-                    // If the middleware has modified data, pass it to the route
-                    $requestToRoute = new Request($modifiedData ?? $parameters);
-                    call_user_func($callback, $requestToRoute, new Response());
-                } else if (is_string($callback)) {
-                    Response::render($callback);
-                }
-                break;
+            // Run handler
+            if (is_callable($route['callback'])) {
+                $route['callback'](new Request($params), new Response());
+            } elseif (is_string($route['callback'])) {
+                Response::render($route['callback']);
             }
+
+            return;
         }
 
-        if (!$routeFound) {
-            Response::notFound();
+        // No route matched
+        Response::notFound();
+    }
+
+    // === REGEX MATCHING ===
+    private static function matchRoute(string $pattern, string $path): ?array {
+        // Replace :param with named regex group
+        $regex = preg_replace_callback('/:([a-zA-Z0-9_]+)/', fn($m) => '(?P<' . $m[1] . '>[^/]+)', $pattern);
+        $regex = '#^' . $regex . '$#';
+
+        if (preg_match($regex, $path, $matches)) {
+            return array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
         }
 
-        if ($routeFound && $wrongMethod) {
-            Response::wrongMethod($urlMethod);
+        return null;
+    }
+
+    private static function normalizePath(string $path): string {
+        $clean = '/' . trim($path, '/');
+        return $clean === '/' ? $clean : rtrim($clean, '/');
+    }
+
+    // === MIDDLEWARE RUNNER ===
+    private static function runMiddleware(array $middlewares, array $params): array {
+        foreach ($middlewares as $middleware) {
+            $next = new Next($params);
+            $next = $middleware(new Request($params), $next);
+            $params = $next->getModifiedData() ?? $params;
         }
-
-    }
-
-    public static function getErrorViews(): string
-    {
-        return self::$errorViews;
-    }
-
-    public static function setErrorViews(string $errorViews): void
-    {
-        self::$errorViews = $errorViews;
-    }
-
-    public static function getViewsFolder(): string{
-        return self::$viewsFolder;
-    }
-
-    public static function getComponentRenderDepth(): int
-    {
-        return self::$COMPONENT_RENDER_DEPTH;
-    }
-
-    public static function setComponentRenderDepth(int $COMPONENT_RENDER_DEPTH): void
-    {
-        self::$COMPONENT_RENDER_DEPTH = $COMPONENT_RENDER_DEPTH;
-    }
-
-    public static function getRoutes(): array {
-        $all_routes = [];
-        foreach (self::$routes as $route) {
-            $all_routes[] = [
-                'route' => $route['route'],
-                'method' => $route['method']
-            ];
-        }
-        return $all_routes;
+        return $params;
     }
 }
-
-class RouteParameterAssembler {
-
-    public static function assembleParameterTable(array $route, array $matches): array{
-        // GET PARAMETER NAME FROM URI
-        $uriExplosion = explode('/', $route['route']);
-        array_shift($uriExplosion);
-
-        // Define the callback function to filter the array
-        $callback = function($value) {
-            return str_starts_with($value, ':'); // Check if the string starts with ":"
-        };
-        // Use array_filter to remove strings that don't start with ":"
-        $result = array_filter($uriExplosion, $callback);
-        $parameters = array();
-        if(count($uriExplosion) != 0){
-
-            $parameterNames = [];
-            foreach ($result as $param){
-                $parameterNames[] = str_replace(":", "", $param);
-            }
-
-            // ASSEMBLE PARAMETER TABLE
-            for ($i=0; $i < count($matches); $i++) {
-                /**
-                 * CHECK IF ARRAY ALREADY HAS PARAMETER OF SAME NAME, IF YES ADD NUMBER TO IT
-                 */
-                if(array_key_exists($parameterNames[$i], $parameters)){
-                    $parameters[$parameterNames[$i] . "_" . $i] = $matches[$i];
-                    break;
-                }
-
-                $parameters[$parameterNames[$i]] = $matches[$i];
-            }
-        }
-
-        return $parameters;
-    }
-}
-
-
