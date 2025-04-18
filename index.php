@@ -16,15 +16,21 @@ Router::setViewsFolder('./views');
 Router::setErrorViews('./views/Errors');
 Router::setComponentRenderDepth(1);
 
-function logEcho(Request $request, Next $next): Next {
-    $username = strtoupper((string) $request->getParameter("username"));
-    $next->setModifiedData(['username' => $username]);
+Router::addMiddleware('auth', function(Request $req, Next $next) {
+    $token = $req->getHeader('Authorization');
+    if ($token !== 'Bearer secret123') {
+        http_response_code(401);
+        echo 'Unauthorized';
+        exit;
+    }
     return $next;
-}
+});
 
+Router::addMiddleware('logger', function(Request $req, Next $next) {
+    error_log("[LOG] Incoming request to: " . $req->getURIpath());
+    return $next;
+});
 
-
-Router::use('logEcho');
 
 // Define some routes
 Router::get('/', function(Request $req, Response $res) {
@@ -80,6 +86,8 @@ Router::post('/db/add/:username', function(Request $req, Response $res) {
     Response::setStatusCode(201);
 });
 
+
+
 Router::get('/:username', function(Request $req, Response $res) {
 
     $name = $req->getParameter("username");
@@ -103,8 +111,6 @@ Router::get('/:username', function(Request $req, Response $res) {
     Response::render($view);
 } );
 
-
-
 Router::get('/debug/routes', function(Request $req, Response $res) {
     echo "<pre>";
     print_r(Router::getRoutes());
@@ -121,20 +127,12 @@ Router::group(['prefix' => '/admin'], function () {
     });
 });
 
+Router::get('/secure', function(Request $req, Response $res) {
+    echo "You are authorized!";
+}, ['auth', 'logger']);
 
-Router::group(['prefix' => '/admin', 'middleware' => function(Request $req, Next $next) {
-    if ($req->getParameter('role') !== 'admin') {
-        die('Access denied');
-    }
-    return $next;
-}], function () {
-    Router::get('/dashboard', function(Request $req, Response $res) {
-        echo "Admin dashboard";
-    });
-
-    Router::get('/users/:id', function(Request $req, Response $res) {
-        echo "User ID: " . $req->getParameter('id');
-    });
+Router::get('/public', function(Request $req, Response $res) {
+    echo "Public endpoint";
 });
 
 

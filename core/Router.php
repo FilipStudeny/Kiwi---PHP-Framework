@@ -10,7 +10,8 @@ require_once './core/http/Response.php';
 
 class Router {
     private static array $routes = [];
-    private static array $middleware = [];
+    private static array $middleware = [];        // global middleware
+    private static array $namedMiddleware = [];   // named middleware registry
     private static array $groupStack = [];
 
     private static string $viewsFolder = '';
@@ -46,63 +47,94 @@ class Router {
         return array_map(fn($r) => ['route' => $r['route'], 'method' => $r['method']], self::$routes);
     }
 
-    // === MIDDLEWARE ===
+    // === GLOBAL MIDDLEWARE ===
     public static function use(callable $middleware): void {
         self::$middleware[] = $middleware;
     }
 
-    // === ROUTE GROUPING ===
+    // === NAMED MIDDLEWARE ===
+    public static function addMiddleware(string $name, callable $middleware): void {
+        self::$namedMiddleware[$name] = $middleware;
+    }
+
+    private static function resolveMiddleware(callable|string|array|null $middleware): array {
+        $result = [];
+
+        if (is_callable($middleware)) {
+            $result[] = $middleware;
+        } elseif (is_string($middleware)) {
+            $result[] = self::$namedMiddleware[$middleware] ?? throw new Exception("Middleware '$middleware' not found.");
+        } elseif (is_array($middleware)) {
+            foreach ($middleware as $item) {
+                if (is_callable($item)) {
+                    $result[] = $item;
+                } elseif (is_string($item)) {
+                    $result[] = self::$namedMiddleware[$item] ?? throw new Exception("Middleware '$item' not found.");
+                }
+            }
+        }
+
+        return $result;
+    }
+
+    // === ROUTE GROUPS ===
     public static function group(array $options, callable $callback): void {
         self::$groupStack[] = $options;
         $callback();
         array_pop(self::$groupStack);
     }
 
-    // === HTTP METHODS ===
-    public static function get(string $route, callable|string $callback, ?callable $middleware = null): void {
+    // === ROUTE DEFINITIONS ===
+    public static function get(string $route, callable|string $callback, callable|string|array|null $middleware = null): void {
         self::registerRoute('GET', $route, $callback, $middleware);
     }
 
-    public static function post(string $route, callable|string $callback, ?callable $middleware = null): void {
+    public static function post(string $route, callable|string $callback, callable|string|array|null $middleware = null): void {
         self::registerRoute('POST', $route, $callback, $middleware);
     }
 
-    public static function put(string $route, callable|string $callback, ?callable $middleware = null): void {
+    public static function put(string $route, callable|string $callback, callable|string|array|null $middleware = null): void {
         self::registerRoute('PUT', $route, $callback, $middleware);
     }
 
-    public static function delete(string $route, callable|string $callback, ?callable $middleware = null): void {
+    public static function delete(string $route, callable|string $callback, callable|string|array|null $middleware = null): void {
         self::registerRoute('DELETE', $route, $callback, $middleware);
     }
 
-    private static function registerRoute(string $method, string $route, callable|string $callback, ?callable $middleware): void {
+    private static function registerRoute(string $method, string $route, callable|string $callback, callable|string|array|null $middleware): void {
         $prefix = '';
         $groupMiddleware = [];
 
         foreach (self::$groupStack as $group) {
             $prefix .= rtrim($group['prefix'] ?? '', '/');
             if (isset($group['middleware'])) {
-                $groupMiddleware[] = $group['middleware'];
+                $groupMiddleware = array_merge($groupMiddleware, self::resolveMiddleware($group['middleware']));
             }
         }
 
-        // Normalize full route
-        $normalized = rtrim($prefix . '/' . ltrim($route, '/'), '/');
-        $fullRoute = $normalized === '' ? '/' : $normalized;
+        $fullRoute = rtrim($prefix . '/' . ltrim($route, '/'), '/');
+        $fullRoute = $fullRoute === '' ? '/' : $fullRoute;
 
         self::$routes[] = [
             'method' => $method,
             'route' => $fullRoute,
             'callback' => $callback,
-            'middleware' => $middleware,
+            'middleware' => self::resolveMiddleware($middleware),
             'groupMiddleware' => $groupMiddleware
         ];
     }
 
-    // === ROUTE RESOLUTION ===
+    // === ROUTE MATCHING ===
     public static function resolve(): void {
         $method = Request::getHTTPmethod();
         $path = self::normalizePath(Request::getURIpath());
+
+        // Sort static routes first (those without ":")
+        usort(self::$routes, function ($a, $b) {
+            $aScore = substr_count($a['route'], ':');
+            $bScore = substr_count($b['route'], ':');
+            return $aScore <=> $bScore;
+        });
 
         foreach (self::$routes as $route) {
             $routePath = self::normalizePath($route['route']);
@@ -112,14 +144,15 @@ class Router {
                 continue;
             }
 
-            // Run middleware
-            $params = self::runMiddleware(self::$middleware, $params);
-            $params = self::runMiddleware($route['groupMiddleware'], $params);
-            if (is_callable($route['middleware'])) {
-                $params = self::runMiddleware([$route['middleware']], $params);
-            }
+            // Combine middleware: global → group → route
+            $middlewares = array_merge(
+                self::$middleware,
+                $route['groupMiddleware'] ?? [],
+                $route['middleware'] ?? []
+            );
 
-            // Run handler
+            $params = self::runMiddleware($middlewares, $params);
+
             if (is_callable($route['callback'])) {
                 $route['callback'](new Request($params), new Response());
             } elseif (is_string($route['callback'])) {
@@ -129,13 +162,21 @@ class Router {
             return;
         }
 
-        // No route matched
         Response::notFound();
     }
 
-    // === REGEX MATCHING ===
+    // === MIDDLEWARE EXECUTION ===
+    private static function runMiddleware(array $middlewares, array $params): array {
+        foreach ($middlewares as $middleware) {
+            $next = new Next($params);
+            $next = $middleware(new Request($params), $next);
+            $params = $next->getModifiedData() ?? $params;
+        }
+        return $params;
+    }
+
+    // === ROUTE MATCHING ===
     private static function matchRoute(string $pattern, string $path): ?array {
-        // Replace :param with named regex group
         $regex = preg_replace_callback('/:([a-zA-Z0-9_]+)/', fn($m) => '(?P<' . $m[1] . '>[^/]+)', $pattern);
         $regex = '#^' . $regex . '$#';
 
@@ -149,15 +190,5 @@ class Router {
     private static function normalizePath(string $path): string {
         $clean = '/' . trim($path, '/');
         return $clean === '/' ? $clean : rtrim($clean, '/');
-    }
-
-    // === MIDDLEWARE RUNNER ===
-    private static function runMiddleware(array $middlewares, array $params): array {
-        foreach ($middlewares as $middleware) {
-            $next = new Next($params);
-            $next = $middleware(new Request($params), $next);
-            $params = $next->getModifiedData() ?? $params;
-        }
-        return $params;
     }
 }
